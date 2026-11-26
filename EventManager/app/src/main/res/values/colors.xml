@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colour palette (light mode). Dark mode values live in values-night/colors.xml. -->
+<resources>
+    <!-- Primary: indigo -->
+    <color name="md_primary">#3949AB</color>
+    <color name="md_on_primary">#FFFFFF</color>
+    <color name="md_primary_container">#DEE0FF</color>
+    <color name="md_on_primary_container">#00105C</color>
+
+    <!-- Secondary: teal (used for chips, session accents) -->
+    <color name="md_secondary">#00796B</color>
+    <color name="md_on_secondary">#FFFFFF</color>
+    <color name="md_secondary_container">#B2DFDB</color>
+    <color name="md_on_secondary_container">#00201C</color>
+
+    <!-- Surfaces -->
+    <color name="md_background">#F7F8FC</color>
+    <color name="md_on_background">#1B1B1F</color>
+    <color name="md_surface">#FFFFFF</color>
+    <color name="md_on_surface">#1B1B1F</color>
+    <color name="md_surface_variant">#E3E1EC</color>
+    <color name="md_on_surface_variant">#46464F</color>
+    <color name="md_outline">#767680</color>
+
+    <!-- Feedback -->
+    <color name="md_error">#BA1A1A</color>
+    <color name="md_on_error">#FFFFFF</color>
+    <color name="status_synced">#2E7D32</color>
+    <color name="status_pending">#EF6C00</color>
+</resources>

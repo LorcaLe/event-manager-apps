@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Event details for attendees: info, favourite star, quick actions and the schedule. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:EventManagerUser.ViewModels"
+             xmlns:m="clr-namespace:EventManagerUser.Models"
+             x:Class="EventManagerUser.Views.EventDetailPage"
+             x:DataType="vm:EventDetailViewModel"
+             Title="Event">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <!-- Title + favourite -->
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="{Binding Item.Name}" FontSize="24" FontAttributes="Bold"
+                       VerticalOptions="Center" />
+                <Button Grid.Column="1"
+                        Text="{Binding Item.FavouriteIcon}"
+                        Command="{Binding ToggleFavouriteCommand}"
+                        FontSize="30" WidthRequest="52" HeightRequest="52" Padding="0"
+                        BackgroundColor="Transparent" TextColor="#F9A825"
+                        SemanticProperties.Description="Add to or remove from favourites" />
+            </Grid>
+
+            <!-- Information card -->
+            <Border Padding="16" StrokeShape="RoundRectangle 16"
+                    Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+                <VerticalStackLayout Spacing="10">
+                    <VerticalStackLayout>
+                        <Label Text="Date(s)" FontSize="12" TextColor="{StaticResource Gray500}" />
+                        <Label Text="{Binding Item.DateText}" FontSize="16" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout>
+                        <Label Text="Time" FontSize="12" TextColor="{StaticResource Gray500}" />
+                        <Label Text="{Binding Item.TimeText}" FontSize="16" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout>
+                        <Label Text="Location" FontSize="12" TextColor="{StaticResource Gray500}" />
+                        <Label Text="{Binding Item.Location}" FontSize="16" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout>
+                        <Label Text="Organiser" FontSize="12" TextColor="{StaticResource Gray500}" />
+                        <Label Text="{Binding Item.Organiser}" FontSize="16" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout>
+                        <Label Text="Type" FontSize="12" TextColor="{StaticResource Gray500}" />
+                        <Label Text="{Binding Item.Type}" FontSize="16" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout IsVisible="{Binding Item.HasDescription}">
+                        <Label Text="Description" FontSize="12" TextColor="{StaticResource Gray500}" />
+                        <Label Text="{Binding Item.Description}" FontSize="16" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Quick actions -->
+            <Button Text="Open in Maps" Command="{Binding OpenMapCommand}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Text="Email organiser"
+                        Command="{Binding EmailOrganiserCommand}"
+                        IsVisible="{Binding Item.HasEmail}"
+                        BackgroundColor="{AppThemeBinding Light=#DEE0FF, Dark=#283BA3}"
+                        TextColor="{AppThemeBinding Light=#00105C, Dark=White}" />
+                <Button Grid.Column="1" Text="Call organiser"
+                        Command="{Binding CallOrganiserCommand}"
+                        IsVisible="{Binding Item.HasPhone}"
+                        BackgroundColor="{AppThemeBinding Light=#DEE0FF, Dark=#283BA3}"
+                        TextColor="{AppThemeBinding Light=#00105C, Dark=White}" />
+            </Grid>
+
+            <!-- Schedule -->
+            <Label Text="SESSIONS" FontSize="14" FontAttributes="Bold"
+                   TextColor="{StaticResource Primary}" Margin="0,12,0,0" />
+            <Label Text="The schedule has not been published yet."
+                   TextColor="{StaticResource Gray500}"
+                   IsVisible="{Binding HasSessions, Converter={StaticResource InvertBool}}" />
+
+            <!-- One block per day, each with its sessions -->
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding SessionGroups}" Spacing="8">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="m:SessionGroup">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{Binding Title}" FontAttributes="Bold"
+                                   TextColor="{StaticResource Primary}" Margin="0,8,0,0" />
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding .}" Spacing="6">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="m:SessionItem">
+                                        <Border Padding="12" StrokeShape="RoundRectangle 12"
+                                                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
+                                            <Grid ColumnDefinitions="64,*" ColumnSpacing="12">
+                                                <Label Text="{Binding TimeText}" FontAttributes="Bold"
+                                                       TextColor="{StaticResource Primary}" FontSize="13" />
+                                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                    <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                                    <Label Text="{Binding Type}" FontSize="13"
+                                                           TextColor="{AppThemeBinding Light=#00796B, Dark=#80CBC4}" />
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <Label Text="{Binding SpeakerText}" IsVisible="{Binding HasSpeaker}"
+                                                               FontSize="13" TextColor="{StaticResource Gray500}"
+                                                               MaxLines="1" LineBreakMode="TailTruncation" />
+                                                        <Label Grid.Column="1" Text="{Binding RoomText}" IsVisible="{Binding HasRoom}"
+                                                               FontSize="13" TextColor="{StaticResource Gray500}"
+                                                               HorizontalOptions="End" />
+                                                    </Grid>
+                                                    <Label Text="{Binding Description}" IsVisible="{Binding HasDescription}"
+                                                           FontSize="13" />
+                                                </VerticalStackLayout>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    All user-facing text lives here (not hard-coded in Java/XML layouts),
+    so wording is consistent and the app can be translated later.
+-->
+<resources>
+    <string name="app_name">Event Manager</string>
+
+    <!-- ===== Event list (main screen) ===== -->
+    <string name="title_events">Events</string>
+    <string name="action_add_event">Add event</string>
+    <string name="empty_events_title">No events yet</string>
+    <string name="empty_events_message">Tap \"Add event\" to create your first event.</string>
+    <plurals name="session_count">
+        <item quantity="one">%d session</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
+    <plurals name="day_count">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="format_date_range">%1$s – %2$s</string>
+    <string name="format_dates_with_days">%1$s · %2$s</string>
+    <string name="format_date_time">%1$s at %2$s</string>
+    <string name="format_time_range">%1$s – %2$s</string>
+    <string name="format_location">Location: %1$s</string>
+    <string name="format_organiser">Organiser: %1$s</string>
+    <string name="status_synced">Synced</string>
+    <string name="status_not_synced">Not synced</string>
+
+    <!-- ===== Event form ===== -->
+    <string name="title_add_event">New event</string>
+    <string name="title_edit_event">Edit event</string>
+    <string name="section_required">Event details</string>
+    <string name="section_optional">Contact &amp; description (optional)</string>
+
+    <string name="hint_event_name">Event name *</string>
+    <string name="hint_start_date">Start date (DD/MM/YYYY) *</string>
+    <string name="hint_end_date">End date (DD/MM/YYYY)</string>
+    <string name="helper_end_date">Filled in from the start date; change it for a multi-day event</string>
+    <string name="hint_time">Start time *</string>
+    <string name="hint_end_time">End time</string>
+    <string name="hint_other_type">Specify type (optional)</string>
+    <string name="helper_other_type">e.g. Hackathon, Webinar, Workshop series</string>
+    <string name="hint_location">Location *</string>
+    <string name="helper_location_search">Type 3+ letters for suggestions, or tap the target icon to use your location</string>
+    <string name="helper_location_pinned">Map location saved ✓</string>
+    <string name="helper_location_finding">Finding your current location…</string>
+    <string name="cd_use_my_location">Use my current location</string>
+    <string name="error_location_permission">Location permission is needed to use your current location</string>
+    <string name="error_location_unavailable">Couldn\'t get your location. Check that location is turned on.</string>
+    <string name="hint_organiser">Organiser *</string>
+    <string name="hint_event_type">Event type *</string>
+    <string name="hint_description">Description</string>
+    <string name="hint_email">Contact email</string>
+    <string name="hint_phone">Contact phone</string>
+
+    <string name="action_review">Review details</string>
+    <string name="placeholder_date">DD/MM/YYYY</string>
+    <string name="title_pick_date">Select date</string>
+    <string name="title_pick_time">Select time</string>
+    <string name="cd_pick_date">Choose date from calendar</string>
+    <string name="cd_pick_time">Choose time</string>
+    <string name="discard_title">Discard changes?</string>
+    <string name="discard_message">The details you entered will be lost.</string>
+    <string name="action_discard">Discard</string>
+    <string name="action_keep_editing">Keep editing</string>
+
+    <!-- Validation messages -->
+    <string name="error_name_required">Please enter the event name</string>
+    <string name="error_start_date_required">Please enter the start date</string>
+    <string name="error_date_format">Please use the format DD/MM/YYYY (e.g. 05/11/2026)</string>
+    <string name="error_end_before_start">End date cannot be before the start date</string>
+    <string name="error_time_required">Please choose the start time</string>
+    <string name="error_end_time_before_start">End time must be after the start time</string>
+    <string name="error_location_required">Please enter the location</string>
+    <string name="error_organiser_required">Please enter the organiser</string>
+    <string name="error_type_required">Please choose the event type</string>
+    <string name="error_email_format">Please enter a valid email address</string>
+    <string name="error_phone_format">Please enter a valid phone number (9–15 digits)</string>
+    <string name="error_duplicate_event">An event with this name already starts on this date</string>
+    <string name="error_sessions_outside_range">%d session(s) fall outside the new dates. Move or delete them first.</string>
+    <string name="error_fix_fields">Please correct the highlighted fields</string>
+
+    <!-- ===== Confirmation screen ===== -->
+    <string name="title_confirm_event">Confirm event</string>
+    <string name="confirm_intro">Please check the details below before saving.</string>
+    <string name="label_name">Name</string>
+    <string name="label_dates">Date(s)</string>
+    <string name="label_time">Time</string>
+    <string name="label_location">Location</string>
+    <string name="label_organiser">Organiser</string>
+    <string name="label_type">Type</string>
+    <string name="label_description">Description</string>
+    <string name="label_email">Contact email</string>
+    <string name="label_phone">Contact phone</string>
+    <string name="value_not_provided">Not provided</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_save">Save</string>
+    <string name="msg_event_saved">Event saved</string>
+    <string name="msg_event_updated">Event updated</string>
+    <string name="error_save_failed">Could not save the event. Please try again.</string>
+
+    <!-- ===== Event detail ===== -->
+    <string name="action_open_map">Open in Maps</string>
+    <string name="section_sessions_count">Sessions (%1$d)</string>
+    <string name="hint_search_sessions">Search sessions by name or description</string>
+    <string name="empty_sessions">No sessions yet. Tap \"Add session\" to add one.</string>
+    <string name="empty_sessions_search">No sessions match \"%1$s\"</string>
+    <string name="action_add_session">Add session</string>
+    <string name="format_day_header">Day %1$d · %2$s</string>
+    <string name="format_speaker">Speaker: %1$s</string>
+    <string name="format_room">Room: %1$s</string>
+    <string name="format_session_id">#%1$d</string>
+    <string name="delete_event_title">Delete this event?</string>
+    <plurals name="delete_event_message">
+        <item quantity="one">This will also delete its %d session. This cannot be undone.</item>
+        <item quantity="other">This will also delete its %d sessions. This cannot be undone.</item>
+    </plurals>
+    <string name="delete_event_message_no_sessions">This cannot be undone.</string>
+    <string name="msg_event_deleted">Event deleted</string>
+    <string name="error_no_maps_app">No maps app found on this device</string>
+
+    <!-- ===== Session form ===== -->
+    <string name="title_add_session">New session</string>
+    <string name="title_edit_session">Edit session #%1$d</string>
+    <string name="section_session_details">Session details</string>
+    <string name="section_session_optional">Speaker, room &amp; description (optional)</string>
+    <string name="hint_session_name">Session name *</string>
+    <string name="hint_session_date">Date *</string>
+    <string name="helper_session_date_single">Same day as the event</string>
+    <string name="helper_session_date_range">Between %1$s and %2$s</string>
+    <string name="hint_session_type">Session type *</string>
+    <string name="hint_speaker">Speaker</string>
+    <string name="hint_room">Room</string>
+    <string name="error_session_name_required">Please enter the session name</string>
+    <string name="error_session_date_required">Please choose the session date</string>
+    <string name="error_session_date_range">The date must be within the event (%1$s – %2$s)</string>
+    <string name="error_session_type_required">Please choose the session type</string>
+    <string name="room_clash_title">Room already booked</string>
+    <string name="room_clash_message">%1$s is already used at this time by:\n%2$s\n\nSave anyway?</string>
+    <string name="action_save_anyway">Save anyway</string>
+    <string name="action_change">Change</string>
+    <string name="delete_session_title">Delete this session?</string>
+    <string name="delete_session_message">\"%1$s\" will be removed from this event.</string>
+    <string name="msg_session_saved">Session added</string>
+    <string name="msg_session_updated">Session updated</string>
+    <string name="msg_session_deleted">Session deleted</string>
+
+    <!-- ===== Event search (feature d) ===== -->
+    <string name="action_search">Search</string>
+    <string name="hint_search_events">Search by name or description</string>
+    <string name="action_advanced_search">Advanced search</string>
+    <string name="advanced_search_subtitle">Find events by date and/or organiser</string>
+    <string name="hint_filter_date">Taking place on</string>
+    <string name="helper_filter_date">Multi-day events running on this date are included</string>
+    <string name="hint_filter_organiser">Organiser</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_apply_search">Search</string>
+    <string name="chip_filter_date">Date: %1$s</string>
+    <string name="chip_filter_organiser">Organiser: %1$s</string>
+    <string name="empty_search_title">No matching events</string>
+    <string name="empty_search_message">Try a different name, date or organiser.</string>
+    <plurals name="events_found">
+        <item quantity="one">%d event found</item>
+        <item quantity="other">%d events found</item>
+    </plurals>
+
+    <!-- ===== Cloud sync (feature e) ===== -->
+    <string name="action_sync">Sync now</string>
+    <string name="action_upload_all">Upload all events</string>
+    <string name="sync_no_network">No internet connection. Changes will sync automatically when you are back online.</string>
+    <string name="sync_failed">Sync failed. Please try again.</string>
+    <string name="sync_up_to_date">Everything is already up to date</string>
+    <string name="sync_done">Synced: %1$d uploaded, %2$d deleted</string>
+    <string name="action_retry">Retry</string>
+
+    <!-- ===== Extra features: QR code + calendar export ===== -->
+    <string name="action_export_schedule">Export schedule (.ics)</string>
+    <string name="title_share_schedule">Share schedule</string>
+    <string name="error_export_failed">Couldn\'t create the file. Please try again.</string>
+    <string name="cd_session_qr">QR code for this session</string>
+    <string name="qr_hint">Scan with a phone camera to add this session to the calendar</string>
+    <string name="action_share_qr">Share QR code</string>
+    <string name="title_share_qr">Share QR code</string>
+    <!-- ===== Common ===== -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_back">Back</string>
+</resources>

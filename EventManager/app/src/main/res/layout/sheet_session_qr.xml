@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- QR code of a session: scanning it adds the session to the attendee's calendar. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/space_l"
+    android:paddingTop="@dimen/space_s"
+    android:paddingBottom="@dimen/space_l">
+
+    <TextView
+        android:id="@+id/tvQrTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textAppearance="?attr/textAppearanceTitleLarge"
+        tools:text="Opening keynote" />
+
+    <TextView
+        android:id="@+id/tvQrSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_xs"
+        android:gravity="center"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        tools:text="10/11/2026 · 09:00 – 10:00" />
+
+    <!-- White background so the code scans well in dark mode too -->
+    <ImageView
+        android:id="@+id/ivQr"
+        android:layout_width="240dp"
+        android:layout_height="240dp"
+        android:layout_marginTop="@dimen/space_m"
+        android:background="@android:color/white"
+        android:contentDescription="@string/cd_session_qr"
+        android:padding="12dp"
+        android:scaleType="fitCenter" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_m"
+        android:gravity="center"
+        android:text="@string/qr_hint"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="?attr/colorOnSurfaceVariant" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnShareQr"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_m"
+        android:text="@string/action_share_qr" />
+</LinearLayout>

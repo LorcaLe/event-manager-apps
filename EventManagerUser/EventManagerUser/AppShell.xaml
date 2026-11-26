@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Two tabs at the bottom: all events, and the user's favourites. -->
+<Shell x:Class="EventManagerUser.AppShell"
+       xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:views="clr-namespace:EventManagerUser.Views"
+       Shell.FlyoutBehavior="Disabled"
+       Title="Event Manager">
+
+    <TabBar>
+        <ShellContent Title="Events"
+                      Route="events"
+                      ContentTemplate="{DataTemplate views:EventsPage}" />
+        <ShellContent Title="Favourites"
+                      Route="favourites"
+                      ContentTemplate="{DataTemplate views:FavouritesPage}" />
+    </TabBar>
+</Shell>
