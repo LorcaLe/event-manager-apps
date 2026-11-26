@@ -105,8 +105,11 @@
                             <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="12" Padding="0,12">
                                 <Border WidthRequest="40" HeightRequest="40" StrokeShape="RoundRectangle 12" StrokeThickness="0"
                                         BackgroundColor="{AppThemeBinding Light={StaticResource IndigoContainerLight}, Dark={StaticResource IndigoContainerDark}}">
-                                    <Label Text="◉" FontSize="15" HorizontalOptions="Center" VerticalOptions="Center"
-                                           TextColor="{AppThemeBinding Light=#232F7A, Dark=White}" />
+                                    <!-- Map pin (Material Icons, Apache 2.0) -->
+                                    <Path WidthRequest="20" HeightRequest="20" Aspect="Uniform"
+                                          HorizontalOptions="Center" VerticalOptions="Center"
+                                          Fill="{AppThemeBinding Light=#232F7A, Dark=White}"
+                                          Data="M12,2C8.13,2 5,5.13 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.87 -3.13,-7 -7,-7zM12,11.5c-1.38,0 -2.5,-1.12 -2.5,-2.5s1.12,-2.5 2.5,-2.5 2.5,1.12 2.5,2.5 -1.12,2.5 -2.5,2.5z" />
                                 </Border>
                                 <Label Grid.Column="1" Text="{Binding Item.Location}" FontSize="15" FontAttributes="Bold"
                                        VerticalOptions="Center"

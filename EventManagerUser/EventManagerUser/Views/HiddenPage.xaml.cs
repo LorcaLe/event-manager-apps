@@ -16,6 +16,7 @@ public partial class HiddenPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        Services.StatusBar.ApplyForPage();
         await _viewModel.LoadAsync();
     }
 }

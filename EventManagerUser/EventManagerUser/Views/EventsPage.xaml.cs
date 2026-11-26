@@ -17,6 +17,7 @@ public partial class EventsPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        Services.StatusBar.ApplyForPage();
         _visible = true;
         await _viewModel.LoadIfNeededAsync();
 

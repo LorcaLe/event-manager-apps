@@ -17,6 +17,7 @@ public partial class EventDetailPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        Services.StatusBar.Apply(Color.FromArgb("#2E3A8C"), lightBackground: false);
         _visible = true;
         Dispatcher.StartTimer(TimeSpan.FromSeconds(30), () =>
         {
