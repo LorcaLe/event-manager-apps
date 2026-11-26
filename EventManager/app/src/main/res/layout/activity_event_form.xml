@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Add / edit event form (feature a).
-    Required fields are marked with * in their hint. Dates can be typed (DD/MM/YYYY)
-    or chosen from a calendar; time and type are chosen, not typed, to avoid errors.
+    Add / edit event form (feature a), calendar-app style:
+      - big inline event name, event type as chips;
+      - "Starts" / "Ends" rows with date + time pills (tap to pick);
+      - place, organiser and contact as rows with leading icons;
+      - pinned actions: "Save as draft" and "Review & publish".
+    Postponed / cancelled are not chosen here: a new event can only be a draft or
+    published; the status of an existing event is changed from its detail screen.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -10,19 +14,22 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/screen_background"
     android:orientation="vertical"
     tools:context=".EventFormActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@color/screen_background">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:background="@color/screen_background"
             app:navigationContentDescription="@string/action_back"
-            app:navigationIcon="?attr/homeAsUpIndicator"
+            app:navigationIcon="@drawable/ic_close"
             tools:title="@string/title_add_event" />
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -35,18 +42,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="@dimen/screen_padding">
+            android:paddingHorizontal="@dimen/screen_padding"
+            android:paddingBottom="@dimen/space_m">
 
-            <!-- ===== Required details ===== -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/space_s"
-                android:text="@string/section_required"
-                android:textAppearance="@style/TextAppearance.EventManager.Section" />
-
+            <!-- ===== Name (big, inline) ===== -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilName"
+                style="@style/Widget.EventManager.TitleField"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/hint_event_name">
@@ -55,153 +57,38 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:imeOptions="actionNext"
-                    android:inputType="textCapSentences"
-                    android:maxLength="100" />
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:maxLength="100"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilStartDate"
+            <!-- ===== Type as chips (one tap instead of a drop-down) ===== -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_start_date"
-                app:endIconContentDescription="@string/cd_pick_date"
-                app:endIconDrawable="@drawable/ic_calendar"
-                app:endIconMode="custom"
-                app:placeholderText="@string/placeholder_date">
+                android:layout_marginTop="@dimen/space_s"
+                app:chipSpacingVertical="0dp"
+                app:singleSelection="true" />
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:digits="0123456789/"
-                    android:imeOptions="actionNext"
-                    android:inputType="date"
-                    android:maxLength="10" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilEndDate"
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvTypeError"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_end_date"
-                app:endIconContentDescription="@string/cd_pick_date"
-                app:endIconDrawable="@drawable/ic_calendar"
-                app:endIconMode="custom"
-                app:helperText="@string/helper_end_date"
-                app:placeholderText="@string/placeholder_date">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:digits="0123456789/"
-                    android:imeOptions="actionNext"
-                    android:inputType="date"
-                    android:maxLength="10" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Start / end time side by side. Times are picked from a clock dialog,
-                 so the fields themselves are not editable by typing. -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilTime"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="@dimen/space_s"
-                    android:layout_weight="1"
-                    android:hint="@string/hint_time"
-                    app:endIconContentDescription="@string/cd_pick_time"
-                    app:endIconDrawable="@drawable/ic_schedule"
-                    app:endIconMode="custom">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clickable="true"
-                        android:cursorVisible="false"
-                        android:focusable="false"
-                        android:inputType="none" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilEndTime"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="@string/hint_end_time"
-                    app:endIconContentDescription="@string/cd_pick_time"
-                    app:endIconDrawable="@drawable/ic_schedule"
-                    app:endIconMode="custom">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clickable="true"
-                        android:cursorVisible="false"
-                        android:focusable="false"
-                        android:inputType="none" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-
-            <!-- Location: address suggestions while typing + "use my location" button -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilLocation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_location"
-                app:endIconContentDescription="@string/cd_use_my_location"
-                app:endIconDrawable="@drawable/ic_my_location"
-                app:endIconMode="custom"
-                app:helperText="@string/helper_location_search">
-
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/actvLocation"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:completionThreshold="3"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="16dp"
-                    android:imeOptions="actionNext"
-                    android:inputType="textCapSentences|textPostalAddress"
-                    android:maxLength="150" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilOrganiser"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_organiser">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionNext"
-                    android:inputType="textCapSentences"
-                    android:maxLength="100" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Event type: chosen from a drop-down list -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilType"
-                style="@style/Widget.EventManager.Dropdown"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_event_type">
-
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/actvType"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginStart="@dimen/space_xs"
+                android:text="@string/error_type_required"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorError"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
             <!-- Shown only when "Other" is selected as the event type -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilOtherType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_s"
                 android:hint="@string/hint_other_type"
                 android:visibility="gone"
                 app:helperText="@string/helper_other_type"
@@ -215,103 +102,355 @@
                     android:maxLength="40" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Status: Draft hides the event from users; Postponed/Cancelled need a reason -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilStatus"
-                style="@style/Widget.EventManager.Dropdown"
+            <!-- ===== When ===== -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.EventManager.FormCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_status"
-                app:helperText="@string/helper_status">
+                android:layout_marginTop="@dimen/space_m">
 
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/actvStatus"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/space_m"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="4dp">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilStatusNote"
+                    <!-- Starts: date + time -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            style="@style/Widget.EventManager.RowIcon"
+                            android:layout_marginTop="14dp"
+                            android:src="@drawable/ic_time" />
+
+                        <TextView
+                            style="@style/Widget.EventManager.RowLabel"
+                            android:text="@string/label_starts" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilStartDate"
+                            style="@style/Widget.EventManager.PillField"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="@dimen/space_s"
+                            android:layout_weight="1"
+                            app:placeholderText="@string/placeholder_date">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:clickable="true"
+                                android:contentDescription="@string/hint_start_date"
+                                android:cursorVisible="false"
+                                android:focusable="false"
+                                android:gravity="center"
+                                android:paddingStart="8dp"
+                                android:paddingTop="12dp"
+                                android:paddingEnd="8dp"
+                                android:paddingBottom="12dp"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilTime"
+                            style="@style/Widget.EventManager.PillField"
+                            android:layout_width="96dp"
+                            android:layout_height="wrap_content"
+                            app:placeholderText="@string/placeholder_time">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:clickable="true"
+                                android:contentDescription="@string/hint_time"
+                                android:cursorVisible="false"
+                                android:focusable="false"
+                                android:gravity="center"
+                                android:paddingStart="8dp"
+                                android:paddingTop="12dp"
+                                android:paddingEnd="8dp"
+                                android:paddingBottom="12dp"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <!-- Ends: date + time -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_s"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
+                        <Space
+                            android:layout_width="20dp"
+                            android:layout_height="0dp" />
+
+                        <TextView
+                            style="@style/Widget.EventManager.RowLabel"
+                            android:text="@string/label_ends" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilEndDate"
+                            style="@style/Widget.EventManager.PillField"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="@dimen/space_s"
+                            android:layout_weight="1"
+                            app:placeholderText="@string/placeholder_date">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:clickable="true"
+                                android:contentDescription="@string/hint_end_date"
+                                android:cursorVisible="false"
+                                android:focusable="false"
+                                android:gravity="center"
+                                android:paddingStart="8dp"
+                                android:paddingTop="12dp"
+                                android:paddingEnd="8dp"
+                                android:paddingBottom="12dp"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilEndTime"
+                            style="@style/Widget.EventManager.PillField"
+                            android:layout_width="96dp"
+                            android:layout_height="wrap_content"
+                            app:placeholderText="@string/placeholder_time">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:clickable="true"
+                                android:contentDescription="@string/hint_end_time"
+                                android:cursorVisible="false"
+                                android:focusable="false"
+                                android:gravity="center"
+                                android:paddingStart="8dp"
+                                android:paddingTop="12dp"
+                                android:paddingEnd="8dp"
+                                android:paddingBottom="12dp"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <!-- Summary: "3 days · Starts in 2 d 4 h" (updated as you type) -->
+                    <LinearLayout
+                        android:id="@+id/rowWhenSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginTop="@dimen/space_s"
+                        android:layout_marginBottom="@dimen/space_s"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <TextView
+                            android:id="@+id/tvDuration"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_badge"
+                            android:backgroundTint="@color/status_upcoming_bg"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:textColor="@color/status_upcoming_fg"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            tools:text="3 days" />
+
+                        <TextView
+                            android:id="@+id/tvRelative"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_s"
+                            android:layout_weight="1"
+                            android:textAppearance="?attr/textAppearanceBodySmall"
+                            android:textColor="@color/text_secondary"
+                            tools:text="Starts in 2 d 4 h" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ===== Where / who ===== -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.EventManager.FormCard"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_status_reason"
-                android:visibility="gone"
-                app:counterEnabled="true"
-                app:counterMaxLength="200"
-                app:helperText="@string/helper_status_reason"
-                tools:visibility="visible">
+                android:layout_height="wrap_content">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="top"
-                    android:inputType="textMultiLine|textCapSentences"
-                    android:maxLength="200"
-                    android:minLines="2" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:orientation="vertical"
+                    android:paddingHorizontal="4dp"
+                    android:paddingVertical="4dp">
+
+                    <!-- Location: address suggestions + "use my location" -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilLocation"
+                        style="@style/Widget.EventManager.RowField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_location"
+                        app:endIconContentDescription="@string/cd_use_my_location"
+                        app:endIconDrawable="@drawable/ic_my_location"
+                        app:endIconMode="custom"
+                        app:startIconDrawable="@drawable/ic_location">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/actvLocation"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:completionThreshold="3"
+                            android:imeOptions="actionNext"
+                            android:inputType="textCapSentences|textPostalAddress"
+                            android:maxLength="150"
+                            android:paddingTop="24dp"
+                            android:paddingBottom="8dp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <View style="@style/Widget.EventManager.RowDivider" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilOrganiser"
+                        style="@style/Widget.EventManager.RowField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_organiser"
+                        app:startIconDrawable="@drawable/ic_person">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionNext"
+                            android:inputType="textCapSentences"
+                            android:maxLength="100" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- ===== Optional details ===== -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.EventManager.FormCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="4dp"
+                    android:paddingVertical="4dp">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilDescription"
+                        style="@style/Widget.EventManager.RowField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_description_optional"
+                        app:counterEnabled="true"
+                        app:counterMaxLength="500"
+                        app:startIconDrawable="@drawable/ic_notes">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="top"
+                            android:inputType="textMultiLine|textCapSentences"
+                            android:maxLength="500"
+                            android:minLines="2" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <View style="@style/Widget.EventManager.RowDivider" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilEmail"
+                        style="@style/Widget.EventManager.RowField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_email_optional"
+                        app:startIconDrawable="@drawable/ic_mail">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionNext"
+                            android:inputType="textEmailAddress"
+                            android:maxLength="100" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <View style="@style/Widget.EventManager.RowDivider" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilPhone"
+                        style="@style/Widget.EventManager.RowField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_phone_optional"
+                        app:startIconDrawable="@drawable/ic_phone">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionDone"
+                            android:inputType="phone"
+                            android:maxLength="20" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- What the buttons below do -->
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_s"
-                android:layout_marginBottom="@dimen/space_s"
-                android:text="@string/section_optional"
-                android:textAppearance="@style/TextAppearance.EventManager.Section" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilDescription"
+                android:id="@+id/tvFormNote"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_description"
-                app:counterEnabled="true"
-                app:counterMaxLength="500">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="top"
-                    android:inputType="textMultiLine|textCapSentences"
-                    android:maxLength="500"
-                    android:minLines="3" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilEmail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_email">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionNext"
-                    android:inputType="textEmailAddress"
-                    android:maxLength="100" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilPhone"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_phone">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionDone"
-                    android:inputType="phone"
-                    android:maxLength="20" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnReview"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_s"
-                android:text="@string/action_review" />
-
+                android:layout_marginHorizontal="@dimen/space_xs"
+                android:layout_marginTop="@dimen/space_xs"
+                android:drawablePadding="8dp"
+                android:text="@string/form_draft_note"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="@color/text_secondary"
+                app:drawableStartCompat="@drawable/ic_info"
+                app:drawableTint="@color/text_secondary" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <!-- ===== Pinned actions ===== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        android:elevation="8dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/screen_padding"
+        android:paddingVertical="12dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveDraft"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="10dp"
+            android:layout_weight="1"
+            android:text="@string/action_save_draft"
+            app:cornerRadius="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnReview"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1.4"
+            android:text="@string/action_review_publish"
+            app:cornerRadius="16dp" />
+    </LinearLayout>
 </LinearLayout>

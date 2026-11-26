@@ -257,6 +257,66 @@
             android:textColor="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
+    <!-- Multi-select mode: replaces the FAB (long press a card to start) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/selectionBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="@dimen/space_m"
+        android:visibility="gone"
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="6dp"
+        app:strokeColor="@color/card_stroke"
+        app:strokeWidth="1dp"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="8dp"
+            android:paddingVertical="6dp">
+
+            <ImageButton
+                android:id="@+id/btnCancelSelection"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_cancel_selection"
+                android:src="@drawable/ic_close" />
+
+            <TextView
+                android:id="@+id/tvSelectionCount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:textStyle="bold"
+                tools:text="3 selected" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSelectAll"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/action_select_all" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeleteSelected"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="?attr/colorError"
+                android:text="@string/action_delete_selected"
+                android:textColor="?attr/colorOnError"
+                app:icon="@drawable/ic_delete"
+                app:iconTint="?attr/colorOnError" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fabAddEvent"
         android:layout_width="wrap_content"
