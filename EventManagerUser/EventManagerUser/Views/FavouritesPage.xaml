@@ -1,79 +1,40 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- "Favourites" tab (feature h): starred events for quick access. -->
+<!-- "Saved" tab (feature h): saved events, with a warning when one was postponed / cancelled. -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:EventManagerUser.ViewModels"
              xmlns:m="clr-namespace:EventManagerUser.Models"
+             xmlns:views="clr-namespace:EventManagerUser.Views"
              x:Class="EventManagerUser.Views.FavouritesPage"
              x:DataType="vm:FavouritesViewModel"
-             Title="Favourites">
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageLight}, Dark={StaticResource PageDark}}"
+             Title="Saved">
 
-    <Grid Padding="16,8,16,0">
+    <Grid RowDefinitions="Auto,*">
+        <VerticalStackLayout Padding="20,20,20,8" Spacing="2">
+            <Label Text="Your events" Style="{StaticResource MutedText}" FontSize="14" />
+            <Label Text="Saved" FontSize="30" FontAttributes="Bold" CharacterSpacing="-0.5"
+                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+        </VerticalStackLayout>
 
-        <RefreshView
-                     IsRefreshing="{Binding IsRefreshing}"
-                     Command="{Binding LoadCommand}">
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
             <CollectionView ItemsSource="{Binding Favourites}" SelectionMode="None">
 
                 <CollectionView.EmptyView>
                     <VerticalStackLayout Padding="32" Spacing="8" HorizontalOptions="Center">
                         <Label Text="☆" FontSize="48" HorizontalTextAlignment="Center"
-                               TextColor="#F9A825" />
-                        <Label Text="No favourite events yet" FontSize="18" FontAttributes="Bold"
+                               TextColor="{StaticResource StarGold}" />
+                        <Label Text="No saved events yet" FontSize="18" FontAttributes="Bold"
                                HorizontalTextAlignment="Center" />
-                        <Label Text="Tap the star on an event to keep it here for quick access."
-                               HorizontalTextAlignment="Center"
-                               TextColor="{StaticResource Gray500}" />
+                        <Label Text="Tap the star on an event, or swipe it left and tap Save."
+                               HorizontalTextAlignment="Center" Style="{StaticResource MutedText}" FontSize="14" />
                     </VerticalStackLayout>
                 </CollectionView.EmptyView>
 
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="m:EventItem">
-                        <Border Margin="0,6"
-                                Padding="16,12"
-                                StrokeShape="RoundRectangle 16"
-                                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
-                                BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource Gray900}}">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FavouritesViewModel}}, Path=OpenEventCommand, x:DataType=vm:FavouritesViewModel}"
-                                    CommandParameter="{Binding .}" />
-                            </Border.GestureRecognizers>
-
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
-                                <Label Text="{Binding Name}" FontSize="17" FontAttributes="Bold"
-                                       MaxLines="2" LineBreakMode="TailTruncation" VerticalOptions="Center" />
-                                <Button Grid.Column="1"
-                                        Text="{Binding FavouriteIcon}"
-                                        FontSize="24"
-                                        WidthRequest="44" HeightRequest="44" Padding="0"
-                                        BackgroundColor="Transparent"
-                                        TextColor="#F9A825"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FavouritesViewModel}}, Path=ToggleFavouriteCommand, x:DataType=vm:FavouritesViewModel}"
-                                        CommandParameter="{Binding .}" />
-
-                                <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding DateTimeText}"
-                                       TextColor="{StaticResource Primary}" />
-                                <Label Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding LocationText}"
-                                       TextColor="{StaticResource Gray500}" MaxLines="1" LineBreakMode="TailTruncation" />
-                                <Label Grid.Row="3" Grid.ColumnSpan="2" Text="{Binding OrganiserText}"
-                                       TextColor="{StaticResource Gray500}" MaxLines="1" LineBreakMode="TailTruncation" />
-
-                                <!-- Type on the left, session count pinned to the right -->
-                                <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*" Margin="0,6,0,0">
-                                    <Border Padding="10,4" StrokeShape="RoundRectangle 8" Stroke="Transparent"
-                                            BackgroundColor="{AppThemeBinding Light=#DEE0FF, Dark=#283BA3}"
-                                            MaximumWidthRequest="170">
-                                        <Label Text="{Binding Type}" FontSize="12"
-                                               MaxLines="1" LineBreakMode="TailTruncation" />
-                                    </Border>
-                                    <Label Grid.Column="1" Text="{Binding SessionCountText}"
-                                           HorizontalOptions="End" VerticalOptions="Center"
-                                           TextColor="{AppThemeBinding Light=#00796B, Dark=#80CBC4}"
-                                           FontAttributes="Bold" />
-                                </Grid>
-                            </Grid>
-                        </Border>
+                        <views:EventCard Margin="20,6" Tapped="OnCardTapped" StarTapped="OnCardStar" />
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

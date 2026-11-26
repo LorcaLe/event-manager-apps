@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!-- Two tabs at the bottom: all events, and the user's favourites. -->
+<!-- Three tabs at the bottom: Discover, Saved, and the events the user is not interested in. -->
 <Shell x:Class="EventManagerUser.AppShell"
        xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
@@ -8,11 +8,17 @@
        Title="Event Manager">
 
     <TabBar>
-        <ShellContent Title="Events"
+        <ShellContent Title="Discover"
+                      Icon="tab_discover.png"
                       Route="events"
                       ContentTemplate="{DataTemplate views:EventsPage}" />
-        <ShellContent Title="Favourites"
+        <ShellContent Title="Saved"
+                      Icon="tab_saved.png"
                       Route="favourites"
                       ContentTemplate="{DataTemplate views:FavouritesPage}" />
+        <ShellContent Title="Not interested"
+                      Icon="tab_hidden.png"
+                      Route="hidden"
+                      ContentTemplate="{DataTemplate views:HiddenPage}" />
     </TabBar>
 </Shell>

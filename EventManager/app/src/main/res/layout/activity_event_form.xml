@@ -215,6 +215,42 @@
                     android:maxLength="40" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Status: Draft hides the event from users; Postponed/Cancelled need a reason -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilStatus"
+                style="@style/Widget.EventManager.Dropdown"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_status"
+                app:helperText="@string/helper_status">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/actvStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilStatusNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_status_reason"
+                android:visibility="gone"
+                app:counterEnabled="true"
+                app:counterMaxLength="200"
+                app:helperText="@string/helper_status_reason"
+                tools:visibility="visible">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:maxLength="200"
+                    android:minLines="2" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <!-- ===== Optional details ===== -->
             <TextView
                 android:layout_width="wrap_content"

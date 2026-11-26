@@ -9,11 +9,15 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.card.MaterialCardView;
 import com.greenwich.eventmanager.R;
 import com.greenwich.eventmanager.model.Session;
 import com.greenwich.eventmanager.util.DateUtils;
+import com.greenwich.eventmanager.util.EventStatus;
+import com.greenwich.eventmanager.util.UiUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +25,7 @@ import java.util.List;
 /**
  * Shows an event's sessions. For multi-day events a "Day N · date" heading is
  * inserted before the first session of each day, so the list has two row types.
+ * Running sessions show a LIVE badge; finished sessions are dimmed.
  */
 public class SessionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -50,10 +55,24 @@ public class SessionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private final List<Object> rows = new ArrayList<>();
     private final OnSessionClickListener listener;
     private final OnSessionQrClickListener qrListener;
+    private long now = System.currentTimeMillis();
+    private boolean showLive = true;
 
     public SessionAdapter(OnSessionClickListener listener, OnSessionQrClickListener qrListener) {
         this.listener = listener;
         this.qrListener = qrListener;
+    }
+
+    /** Time used to decide which sessions are live / finished. */
+    @SuppressLint("NotifyDataSetChanged")
+    public void setNow(long now) {
+        this.now = now;
+        notifyDataSetChanged();
+    }
+
+    /** False for draft / postponed / cancelled events: no session is "live". */
+    public void setShowLive(boolean showLive) {
+        this.showLive = showLive;
     }
 
     /**
@@ -102,7 +121,7 @@ public class SessionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         if (holder instanceof HeaderHolder) {
             ((HeaderHolder) holder).bind((DayHeader) row);
         } else {
-            ((SessionHolder) holder).bind((Session) row, listener, qrListener);
+            ((SessionHolder) holder).bind((Session) row, now, showLive, listener, qrListener);
         }
     }
 
@@ -123,12 +142,16 @@ public class SessionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     static class SessionHolder extends RecyclerView.ViewHolder {
-        private final TextView tvStartTime, tvEndTime, tvName, tvId, tvType, tvSpeaker, tvRoom;
+        private final MaterialCardView card;
+        private final TextView tvStartTime, tvEndTime, tvName, tvId, tvType, tvSpeaker, tvRoom,
+                tvStatus;
         private final View rowMeta;
         private final View btnQr;
 
         SessionHolder(@NonNull View itemView) {
             super(itemView);
+            card = (MaterialCardView) itemView;
+            tvStatus = itemView.findViewById(R.id.tvSessionStatus);
             tvStartTime = itemView.findViewById(R.id.tvStartTime);
             tvEndTime = itemView.findViewById(R.id.tvEndTime);
             tvName = itemView.findViewById(R.id.tvSessionName);
@@ -140,8 +163,24 @@ public class SessionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             btnQr = itemView.findViewById(R.id.btnSessionQr);
         }
 
-        void bind(Session s, OnSessionClickListener listener, OnSessionQrClickListener qrListener) {
+        void bind(Session s, long now, boolean showLive,
+                  OnSessionClickListener listener, OnSessionQrClickListener qrListener) {
             Context ctx = itemView.getContext();
+
+            // Live / finished state (time-based; no end time = 60 minutes)
+            String state = EventStatus.sessionTimeStatus(s, now);
+            boolean live = showLive && EventStatus.ONGOING.equals(state);
+            boolean finished = EventStatus.ENDED.equals(state);
+            tvStatus.setVisibility(live || finished ? View.VISIBLE : View.GONE);
+            if (live) {
+                UiUtils.bindStatusBadge(tvStatus, EventStatus.ONGOING);
+            } else if (finished) {
+                UiUtils.bindStatusBadge(tvStatus, EventStatus.ENDED, ctx.getString(R.string.session_ended));
+            }
+            card.setStrokeColor(ContextCompat.getColor(ctx,
+                    live ? R.color.status_live_accent : R.color.card_stroke));
+            card.setStrokeWidth(Math.round(ctx.getResources().getDisplayMetrics().density * (live ? 1.5f : 1f)));
+            itemView.setAlpha(finished ? 0.6f : 1f);
 
             tvStartTime.setText(s.getStartTime());
             boolean hasEnd = !TextUtils.isEmpty(s.getEndTime());

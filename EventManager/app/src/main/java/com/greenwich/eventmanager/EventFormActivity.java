@@ -44,6 +44,7 @@ import com.google.android.material.timepicker.TimeFormat;
 import com.greenwich.eventmanager.data.DatabaseHelper;
 import com.greenwich.eventmanager.model.Event;
 import com.greenwich.eventmanager.util.DateUtils;
+import com.greenwich.eventmanager.util.EventFormat;
 import com.greenwich.eventmanager.util.LocationHelper;
 
 import java.util.ArrayList;
@@ -99,8 +100,9 @@ public class EventFormActivity extends AppCompatActivity {
     private Double longitude;
 
     private TextInputLayout tilName, tilStartDate, tilEndDate, tilTime, tilEndTime, tilLocation,
-            tilOrganiser, tilType, tilOtherType, tilDescription, tilEmail, tilPhone;
-    private MaterialAutoCompleteTextView actvType, actvLocation;
+            tilOrganiser, tilType, tilOtherType, tilDescription, tilEmail, tilPhone,
+            tilStatus, tilStatusNote;
+    private MaterialAutoCompleteTextView actvType, actvLocation, actvStatus;
 
     // Location suggestions
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
@@ -139,6 +141,8 @@ public class EventFormActivity extends AppCompatActivity {
         db = DatabaseHelper.getInstance(this);
         bindViews();
         actvType.setSimpleItems(Event.TYPES);
+        actvStatus.setSimpleItems(EventFormat.manualStatusLabels(this));
+        actvStatus.setText(EventFormat.statusLabel(this, Event.STATUS_PUBLISHED), false);
 
         // Edit mode?
         long eventId = getIntent().getLongExtra(EXTRA_EVENT_ID, -1);
@@ -160,6 +164,7 @@ public class EventFormActivity extends AppCompatActivity {
 
         setupPickers();
         setupTypeField();
+        setupStatusField();
         setupAutoFill();
         setupFieldValidationOnLeave();
         setupChangeTracking();   // after fillForm, so pre-filled values don't count as changes
@@ -184,6 +189,9 @@ public class EventFormActivity extends AppCompatActivity {
         tilPhone = findViewById(R.id.tilPhone);
         actvType = findViewById(R.id.actvType);
         actvLocation = findViewById(R.id.actvLocation);
+        tilStatus = findViewById(R.id.tilStatus);
+        tilStatusNote = findViewById(R.id.tilStatusNote);
+        actvStatus = findViewById(R.id.actvStatus);
     }
 
     private void fillForm(Event e) {
@@ -209,6 +217,10 @@ public class EventFormActivity extends AppCompatActivity {
         setText(tilPhone, e.getContactPhone());
         latitude = e.getLatitude();
         longitude = e.getLongitude();
+
+        actvStatus.setText(EventFormat.statusLabel(this, e.getStatus()), false);
+        setText(tilStatusNote, e.getStatusNote());
+        updateStatusNoteVisibility();
     }
 
     // =====================================================================
@@ -296,6 +308,15 @@ public class EventFormActivity extends AppCompatActivity {
             type = text(tilOtherType);   // store the user's own type name
         }
 
+        // --- Required: status; a reason is required when postponed / cancelled
+        String status = selectedStatus();
+        String statusNote = text(tilStatusNote);
+        if (status == null) {
+            firstError = showError(tilStatus, getString(R.string.error_status_required), firstError);
+        } else if (Event.statusNeedsReason(status) && statusNote.isEmpty()) {
+            firstError = showError(tilStatusNote, getString(R.string.error_status_reason_required), firstError);
+        }
+
         // --- Optional: email and phone format (only checked if something was entered)
         if (!checkEmail()) {
             firstError = firstError != null ? firstError : tilEmail;
@@ -345,6 +366,8 @@ public class EventFormActivity extends AppCompatActivity {
         event.setDescription(emptyToNull(text(tilDescription)));
         event.setContactEmail(emptyToNull(text(tilEmail)));
         event.setContactPhone(emptyToNull(text(tilPhone)));
+        event.setStatus(status);
+        event.setStatusNote(Event.statusNeedsReason(status) ? statusNote : null);
         return event;
     }
 
@@ -389,6 +412,27 @@ public class EventFormActivity extends AppCompatActivity {
                     checkPhone();
                 }
             });
+        }
+    }
+
+    // =====================================================================
+    // Status: Postponed / Cancelled reveal a required "Reason" field
+    // =====================================================================
+
+    /** Status code (Event.STATUS_*) for the label chosen in the drop-down, or null. */
+    private String selectedStatus() {
+        return EventFormat.manualStatusFromLabel(this, text(tilStatus));
+    }
+
+    private void setupStatusField() {
+        actvStatus.setOnItemClickListener((parent, view, position, id) -> updateStatusNoteVisibility());
+    }
+
+    private void updateStatusNoteVisibility() {
+        boolean needsReason = Event.statusNeedsReason(selectedStatus());
+        tilStatusNote.setVisibility(needsReason ? View.VISIBLE : View.GONE);
+        if (!needsReason) {
+            tilStatusNote.setError(null);
         }
     }
 
@@ -657,7 +701,8 @@ public class EventFormActivity extends AppCompatActivity {
 
     private void setupChangeTracking() {
         TextInputLayout[] fields = {tilName, tilStartDate, tilEndDate, tilTime, tilEndTime,
-                tilLocation, tilOrganiser, tilType, tilOtherType, tilDescription, tilEmail, tilPhone};
+                tilLocation, tilOrganiser, tilType, tilOtherType, tilDescription, tilEmail, tilPhone,
+                tilStatus, tilStatusNote};
         for (TextInputLayout til : fields) {
             onTextChanged(til, () -> {
                 formChanged = true;

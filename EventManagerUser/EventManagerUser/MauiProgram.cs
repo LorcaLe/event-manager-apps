@@ -22,11 +22,15 @@ public static class MauiProgram
         // Singletons are shared by every page (one list of events, one favourites store).
         builder.Services.AddSingleton<EventService>();
         builder.Services.AddSingleton<FavouritesService>();
+        builder.Services.AddSingleton<NotInterestedService>();
+        builder.Services.AddSingleton<EventPreferences>();
 
         builder.Services.AddSingleton<EventsViewModel>();
         builder.Services.AddSingleton<EventsPage>();
         builder.Services.AddSingleton<FavouritesViewModel>();
         builder.Services.AddSingleton<FavouritesPage>();
+        builder.Services.AddSingleton<HiddenViewModel>();
+        builder.Services.AddSingleton<HiddenPage>();
         builder.Services.AddTransient<EventDetailViewModel>();   // a fresh one per event opened
         builder.Services.AddTransient<EventDetailPage>();
 

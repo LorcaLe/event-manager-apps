@@ -1,120 +1,209 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- Event details for attendees: info, favourite star, quick actions and the schedule. -->
+<!--
+    Event details for attendees: indigo hero with status badge + countdown (or live
+    progress), an orange / red banner with the reason when postponed / cancelled,
+    key info, About, the schedule as a timeline (LIVE NOW badge), and a fixed action
+    bar: Not interested | Save event.
+-->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:EventManagerUser.ViewModels"
              xmlns:m="clr-namespace:EventManagerUser.Models"
              x:Class="EventManagerUser.Views.EventDetailPage"
              x:DataType="vm:EventDetailViewModel"
-             Title="Event">
+             Shell.BackgroundColor="{StaticResource HeroIndigo}"
+             Shell.ForegroundColor="White"
+             Shell.TitleColor="White"
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageLight}, Dark={StaticResource PageDark}}"
+             Title="">
 
-    <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Spacing="0">
 
-            <!-- Title + favourite -->
-            <Grid ColumnDefinitions="*,Auto">
-                <Label Text="{Binding Item.Name}" FontSize="24" FontAttributes="Bold"
-                       VerticalOptions="Center" />
-                <Button Grid.Column="1"
-                        Text="{Binding Item.FavouriteIcon}"
-                        Command="{Binding ToggleFavouriteCommand}"
-                        FontSize="30" WidthRequest="52" HeightRequest="52" Padding="0"
-                        BackgroundColor="Transparent" TextColor="#F9A825"
-                        SemanticProperties.Description="Add to or remove from favourites" />
-            </Grid>
+                <!-- ===== Hero ===== -->
+                <VerticalStackLayout BackgroundColor="{StaticResource HeroIndigo}" Padding="20,4,20,24" Spacing="10">
+                    <HorizontalStackLayout Spacing="8">
+                        <Border Style="{StaticResource StatusBadge}" BackgroundColor="#29FFFFFF" Padding="10,4">
+                            <Label Text="{Binding Item.Type}" FontSize="12" FontAttributes="Bold" TextColor="White" />
+                        </Border>
+                        <Border Style="{StaticResource StatusBadge}" BackgroundColor="{Binding Item.StatusBg}" Padding="10,4">
+                            <Label Text="{Binding Item.StatusText}" Style="{StaticResource StatusBadgeLabel}"
+                                   TextColor="{Binding Item.StatusFg}" />
+                        </Border>
+                    </HorizontalStackLayout>
+                    <Label Text="{Binding Item.Name}" FontSize="26" FontAttributes="Bold" TextColor="White"
+                           CharacterSpacing="-0.3" />
+                    <Label Text="{Binding Item.OrganiserText}" FontSize="14" TextColor="#C9CEF5" />
 
-            <!-- Information card -->
-            <Border Padding="16" StrokeShape="RoundRectangle 16"
-                    Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
-                <VerticalStackLayout Spacing="10">
-                    <VerticalStackLayout>
-                        <Label Text="Date(s)" FontSize="12" TextColor="{StaticResource Gray500}" />
-                        <Label Text="{Binding Item.DateText}" FontSize="16" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout>
-                        <Label Text="Time" FontSize="12" TextColor="{StaticResource Gray500}" />
-                        <Label Text="{Binding Item.TimeText}" FontSize="16" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout>
-                        <Label Text="Location" FontSize="12" TextColor="{StaticResource Gray500}" />
-                        <Label Text="{Binding Item.Location}" FontSize="16" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout>
-                        <Label Text="Organiser" FontSize="12" TextColor="{StaticResource Gray500}" />
-                        <Label Text="{Binding Item.Organiser}" FontSize="16" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout>
-                        <Label Text="Type" FontSize="12" TextColor="{StaticResource Gray500}" />
-                        <Label Text="{Binding Item.Type}" FontSize="16" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout IsVisible="{Binding Item.HasDescription}">
-                        <Label Text="Description" FontSize="12" TextColor="{StaticResource Gray500}" />
-                        <Label Text="{Binding Item.Description}" FontSize="16" />
+                    <!-- Countdown (upcoming) -->
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10" Margin="0,8,0,0" IsVisible="{Binding Item.IsUpcoming}">
+                        <Border StrokeShape="RoundRectangle 14" StrokeThickness="0" BackgroundColor="#1FFFFFFF" Padding="8,10">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Item.CountdownDays}" FontSize="26" FontAttributes="Bold"
+                                       TextColor="White" HorizontalTextAlignment="Center" />
+                                <Label Text="days" FontSize="12" TextColor="#C9CEF5" HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="1" StrokeShape="RoundRectangle 14" StrokeThickness="0" BackgroundColor="#1FFFFFFF" Padding="8,10">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Item.CountdownHours}" FontSize="26" FontAttributes="Bold"
+                                       TextColor="White" HorizontalTextAlignment="Center" />
+                                <Label Text="hours" FontSize="12" TextColor="#C9CEF5" HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="2" StrokeShape="RoundRectangle 14" StrokeThickness="0" BackgroundColor="#1FFFFFFF" Padding="8,10">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Item.CountdownMinutes}" FontSize="26" FontAttributes="Bold"
+                                       TextColor="White" HorizontalTextAlignment="Center" />
+                                <Label Text="min" FontSize="12" TextColor="#C9CEF5" HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <!-- Progress (live) -->
+                    <VerticalStackLayout IsVisible="{Binding Item.IsLive}" Spacing="6" Margin="0,8,0,0">
+                        <ProgressBar Progress="{Binding Item.Progress}" ProgressColor="White" />
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Label Text="{Binding Item.CountdownText}" FontSize="12" TextColor="#C9CEF5" />
+                            <Label Grid.Column="1" Text="{Binding Item.CurrentSessionText}" FontSize="12" TextColor="#C9CEF5"
+                                   HorizontalTextAlignment="End" MaxLines="1" LineBreakMode="TailTruncation" />
+                        </Grid>
                     </VerticalStackLayout>
                 </VerticalStackLayout>
-            </Border>
 
-            <!-- Quick actions -->
-            <Button Text="Open in Maps" Command="{Binding OpenMapCommand}" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                <Button Text="Email organiser"
-                        Command="{Binding EmailOrganiserCommand}"
-                        IsVisible="{Binding Item.HasEmail}"
-                        BackgroundColor="{AppThemeBinding Light=#DEE0FF, Dark=#283BA3}"
-                        TextColor="{AppThemeBinding Light=#00105C, Dark=White}" />
-                <Button Grid.Column="1" Text="Call organiser"
-                        Command="{Binding CallOrganiserCommand}"
-                        IsVisible="{Binding Item.HasPhone}"
-                        BackgroundColor="{AppThemeBinding Light=#DEE0FF, Dark=#283BA3}"
-                        TextColor="{AppThemeBinding Light=#00105C, Dark=White}" />
-            </Grid>
+                <VerticalStackLayout Padding="16" Spacing="12">
 
-            <!-- Schedule -->
-            <Label Text="SESSIONS" FontSize="14" FontAttributes="Bold"
-                   TextColor="{StaticResource Primary}" Margin="0,12,0,0" />
-            <Label Text="The schedule has not been published yet."
-                   TextColor="{StaticResource Gray500}"
-                   IsVisible="{Binding HasSessions, Converter={StaticResource InvertBool}}" />
-
-            <!-- One block per day, each with its sessions -->
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding SessionGroups}" Spacing="8">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="m:SessionGroup">
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="{Binding Title}" FontAttributes="Bold"
-                                   TextColor="{StaticResource Primary}" Margin="0,8,0,0" />
-                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding .}" Spacing="6">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="m:SessionItem">
-                                        <Border Padding="12" StrokeShape="RoundRectangle 12"
-                                                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}">
-                                            <Grid ColumnDefinitions="64,*" ColumnSpacing="12">
-                                                <Label Text="{Binding TimeText}" FontAttributes="Bold"
-                                                       TextColor="{StaticResource Primary}" FontSize="13" />
-                                                <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                                    <Label Text="{Binding Name}" FontAttributes="Bold" />
-                                                    <Label Text="{Binding Type}" FontSize="13"
-                                                           TextColor="{AppThemeBinding Light=#00796B, Dark=#80CBC4}" />
-                                                    <Grid ColumnDefinitions="*,Auto">
-                                                        <Label Text="{Binding SpeakerText}" IsVisible="{Binding HasSpeaker}"
-                                                               FontSize="13" TextColor="{StaticResource Gray500}"
-                                                               MaxLines="1" LineBreakMode="TailTruncation" />
-                                                        <Label Grid.Column="1" Text="{Binding RoomText}" IsVisible="{Binding HasRoom}"
-                                                               FontSize="13" TextColor="{StaticResource Gray500}"
-                                                               HorizontalOptions="End" />
-                                                    </Grid>
-                                                    <Label Text="{Binding Description}" IsVisible="{Binding HasDescription}"
-                                                           FontSize="13" />
-                                                </VerticalStackLayout>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
-                            </VerticalStackLayout>
+                    <!-- ===== Postponed / cancelled banner ===== -->
+                    <Border IsVisible="{Binding Item.IsChanged}" StrokeShape="RoundRectangle 16" StrokeThickness="0"
+                            Padding="14" BackgroundColor="{Binding Item.StatusBg}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding Item.ChangedTitle}" FontSize="15" FontAttributes="Bold"
+                                   TextColor="{Binding Item.StatusFg}" />
+                            <Label Text="{Binding Item.StatusNote}" IsVisible="{Binding Item.HasStatusNote}"
+                                   FontSize="14" TextColor="{Binding Item.StatusFg}" />
                         </VerticalStackLayout>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
+                    </Border>
+
+                    <!-- ===== Key info ===== -->
+                    <Border Style="{StaticResource Card}" Padding="16,4">
+                        <VerticalStackLayout>
+                            <Grid ColumnDefinitions="40,*" ColumnSpacing="12" Padding="0,12">
+                                <Border WidthRequest="40" HeightRequest="40" StrokeShape="RoundRectangle 12" StrokeThickness="0"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource IndigoContainerLight}, Dark={StaticResource IndigoContainerDark}}">
+                                    <Label Text="{Binding Item.DayNumber}" FontAttributes="Bold" FontSize="15"
+                                           HorizontalOptions="Center" VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light=#232F7A, Dark=White}" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="{Binding Item.LongDateText}" FontSize="15" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <Label Text="{Binding Item.TimeAndDaysText}" Style="{StaticResource SecondaryText}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                            <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource CardStrokeLight}, Dark={StaticResource CardStrokeDark}}" />
+                            <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="12" Padding="0,12">
+                                <Border WidthRequest="40" HeightRequest="40" StrokeShape="RoundRectangle 12" StrokeThickness="0"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource IndigoContainerLight}, Dark={StaticResource IndigoContainerDark}}">
+                                    <Label Text="◉" FontSize="15" HorizontalOptions="Center" VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light=#232F7A, Dark=White}" />
+                                </Border>
+                                <Label Grid.Column="1" Text="{Binding Item.Location}" FontSize="15" FontAttributes="Bold"
+                                       VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Button Grid.Column="2" Text="Directions" Style="{StaticResource TextButton}"
+                                        Command="{Binding OpenMapCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Contact the organiser -->
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Text="Email organiser" Command="{Binding EmailOrganiserCommand}"
+                                IsVisible="{Binding Item.HasEmail}" CornerRadius="12"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource IndigoContainerLight}, Dark={StaticResource IndigoContainerDark}}"
+                                TextColor="{AppThemeBinding Light=#232F7A, Dark=White}" />
+                        <Button Grid.Column="1" Text="Call organiser" Command="{Binding CallOrganiserCommand}"
+                                IsVisible="{Binding Item.HasPhone}" CornerRadius="12"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource IndigoContainerLight}, Dark={StaticResource IndigoContainerDark}}"
+                                TextColor="{AppThemeBinding Light=#232F7A, Dark=White}" />
+                    </Grid>
+
+                    <!-- ===== About ===== -->
+                    <VerticalStackLayout IsVisible="{Binding Item.HasDescription}" Spacing="6">
+                        <Label Text="About" Style="{StaticResource SectionTitle}" FontSize="17" />
+                        <Label Text="{Binding Item.Description}" FontSize="15" LineHeight="1.3"
+                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                    </VerticalStackLayout>
+
+                    <!-- ===== Schedule (timeline) ===== -->
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                        <Label Text="Schedule" Style="{StaticResource SectionTitle}" FontSize="17" />
+                        <Label Grid.Column="1" Text="{Binding Item.SessionCountText}" Style="{StaticResource MutedText}"
+                               FontSize="13" VerticalOptions="Center" />
+                    </Grid>
+                    <Label Text="The schedule has not been published yet." Style="{StaticResource MutedText}" FontSize="14"
+                           IsVisible="{Binding HasSessions, Converter={StaticResource InvertBool}}" />
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding SessionGroups}" Spacing="6">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="m:SessionGroup">
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Text="{Binding Title}" FontSize="13" FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}" Margin="0,8,0,6" />
+                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding .}">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="m:SessionItem">
+                                                <Grid ColumnDefinitions="52,20,*" Opacity="{Binding RowOpacity}" MinimumHeightRequest="64">
+                                                    <Label Text="{Binding StartTime}" FontSize="13" FontAttributes="Bold" Margin="0,2,0,0"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                                    <!-- Dot + line -->
+                                                    <BoxView Grid.Column="1" WidthRequest="2" HorizontalOptions="Center" Margin="0,14,0,0"
+                                                             Color="{AppThemeBinding Light={StaticResource CardStrokeLight}, Dark={StaticResource CardStrokeDark}}" />
+                                                    <Ellipse Grid.Column="1" WidthRequest="10" HeightRequest="10" HorizontalOptions="Center"
+                                                             VerticalOptions="Start" Margin="0,5,0,0"
+                                                             Fill="{StaticResource Primary}" />
+                                                    <VerticalStackLayout Grid.Column="2" Spacing="3" Padding="6,0,0,14">
+                                                        <Border Style="{StaticResource StatusBadge}" IsVisible="{Binding IsLiveNow}"
+                                                                BackgroundColor="{StaticResource StatusLiveBg}">
+                                                            <Label Text="LIVE NOW" Style="{StaticResource StatusBadgeLabel}"
+                                                                   TextColor="{StaticResource StatusLiveFg}" />
+                                                        </Border>
+                                                        <Label Text="{Binding Name}" FontSize="15" FontAttributes="Bold"
+                                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                                        <Label Text="{Binding MetaText}" Style="{StaticResource SecondaryText}" />
+                                                        <Label Text="{Binding TimeText}" Style="{StaticResource MutedText}" />
+                                                        <Label Text="{Binding Description}" IsVisible="{Binding HasDescription}"
+                                                               Style="{StaticResource SecondaryText}" />
+                                                    </VerticalStackLayout>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
             </VerticalStackLayout>
-        </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+
+        <!-- ===== Fixed action bar ===== -->
+        <Border Grid.Row="1" StrokeThickness="0" Padding="16,10,16,14"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardLight}, Dark={StaticResource CardDark}}">
+            <Border.Shadow>
+                <Shadow Brush="Black" Opacity="0.08" Radius="12" Offset="0,-2" />
+            </Border.Shadow>
+            <Grid ColumnDefinitions="*,1.3*" ColumnSpacing="10">
+                <Button Text="{Binding Item.NotInterestedText}" Command="{Binding ToggleNotInterestedCommand}"
+                        CornerRadius="14" HeightRequest="50" BorderWidth="1"
+                        BorderColor="{AppThemeBinding Light=#D5D8E3, Dark={StaticResource CardStrokeDark}}"
+                        BackgroundColor="Transparent"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                <Button Grid.Column="1" Text="{Binding Item.SaveText}" Command="{Binding ToggleFavouriteCommand}"
+                        CornerRadius="14" HeightRequest="50" FontAttributes="Bold"
+                        BackgroundColor="{StaticResource Primary}" TextColor="White" />
+            </Grid>
+        </Border>
+    </Grid>
 </ContentPage>
