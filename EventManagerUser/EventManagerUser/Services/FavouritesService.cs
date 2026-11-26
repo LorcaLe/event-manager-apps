@@ -20,6 +20,16 @@ public class FavouritesService
 
     public bool IsFavourite(string uuid) => _ids.Contains(uuid);
 
+    /// <summary>Sets the favourite state explicitly (e.g. cleared when marked "Not interested").</summary>
+    public void Set(string uuid, bool favourite)
+    {
+        bool changed = favourite ? _ids.Add(uuid) : _ids.Remove(uuid);
+        if (changed)
+        {
+            Preferences.Default.Set(PreferenceKey, JsonSerializer.Serialize(_ids));
+        }
+    }
+
     /// <summary>Adds or removes the event; returns true if it is now a favourite.</summary>
     public bool Toggle(string uuid)
     {

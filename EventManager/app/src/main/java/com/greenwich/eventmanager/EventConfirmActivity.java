@@ -64,6 +64,10 @@ public class EventConfirmActivity extends AppCompatActivity {
         addRow(R.string.label_location, event.getLocation());
         addRow(R.string.label_organiser, event.getOrganiser());
         addRow(R.string.label_type, event.getType());
+        addRow(R.string.label_status, EventFormat.statusLabel(this, event.getStatus()));
+        if (Event.statusNeedsReason(event.getStatus())) {
+            addRow(R.string.label_status_reason, event.getStatusNote());
+        }
         addRow(R.string.label_description, event.getDescription());
         addRow(R.string.label_email, event.getContactEmail());
         addRow(R.string.label_phone, event.getContactPhone());

@@ -7,21 +7,30 @@ using EventManagerUser.Services;
 namespace EventManagerUser.ViewModels;
 
 /// <summary>
-/// Event details for attendees: information, favourite star, schedule grouped
-/// by day, and shortcuts to open the map, email or call the organiser.
+/// Event details for attendees: hero with status + countdown, banner when postponed /
+/// cancelled, information, schedule grouped by day (LIVE NOW badge), and the
+/// "Not interested" / "Save event" actions.
 /// </summary>
 public partial class EventDetailViewModel : ObservableObject, IQueryAttributable
 {
-    private readonly FavouritesService _favourites;
+    private readonly EventPreferences _preferences;
 
     [ObservableProperty] private EventItem? item;
 
     public ObservableCollection<SessionGroup> SessionGroups { get; } = new();
     public bool HasSessions => SessionGroups.Count > 0;
 
-    public EventDetailViewModel(FavouritesService favourites)
+    public EventDetailViewModel(EventPreferences preferences)
     {
-        _favourites = favourites;
+        _preferences = preferences;
+    }
+
+    /// <summary>Called every minute by the page so the countdown and LIVE badges move on.</summary>
+    public void Refresh()
+    {
+        if (Item == null) return;
+        Item.RefreshTime();
+        BuildSessionGroups(Item);
     }
 
     /// <summary>Receives the event passed by GoToAsync(..., { ["Event"] = item }).</summary>
@@ -42,7 +51,8 @@ public partial class EventDetailViewModel : ObservableObject, IQueryAttributable
             DateTime date = DateTime.ParseExact(day.Key, "yyyy-MM-dd",
                 System.Globalization.CultureInfo.InvariantCulture);
             int dayNumber = (date - e.StartDay).Days + 1;
-            string title = e.IsMultiDay ? $"Day {dayNumber} · {date:dd/MM/yyyy}" : $"{date:dd/MM/yyyy}";
+            string dayText = date.ToString("ddd d MMM", System.Globalization.CultureInfo.InvariantCulture);
+            string title = e.IsMultiDay ? $"Day {dayNumber} · {dayText}" : dayText;
             SessionGroups.Add(new SessionGroup(title, day));
         }
         OnPropertyChanged(nameof(HasSessions));
@@ -53,7 +63,20 @@ public partial class EventDetailViewModel : ObservableObject, IQueryAttributable
     {
         if (Item != null)
         {
-            Item.IsFavourite = _favourites.Toggle(Item.Uuid);
+            _preferences.ToggleSaved(Item);
+        }
+    }
+
+    /// <summary>Hide the event (it disappears from Discover / Saved) or restore it.</summary>
+    [RelayCommand]
+    private async Task ToggleNotInterested()
+    {
+        if (Item == null) return;
+        bool hide = !Item.IsNotInterested;
+        _preferences.SetNotInterested(Item, hide);
+        if (hide)
+        {
+            await Shell.Current.GoToAsync("..");
         }
     }
 

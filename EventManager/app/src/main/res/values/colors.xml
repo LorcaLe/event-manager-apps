@@ -14,7 +14,7 @@
     <color name="md_on_secondary_container">#00201C</color>
 
     <!-- Surfaces -->
-    <color name="md_background">#F7F8FC</color>
+    <color name="md_background">#F5F6FA</color>
     <color name="md_on_background">#1B1B1F</color>
     <color name="md_surface">#FFFFFF</color>
     <color name="md_on_surface">#1B1B1F</color>
@@ -27,4 +27,34 @@
     <color name="md_on_error">#FFFFFF</color>
     <color name="status_synced">#2E7D32</color>
     <color name="status_pending">#EF6C00</color>
+    <!-- Screen background / card outline used by the redesigned screens -->
+    <color name="screen_background">#F5F6FA</color>
+    <color name="card_stroke">#E6E8F0</color>
+    <color name="card_stroke_draft">#B9BDCB</color>
+    <color name="meta_chip_bg">#EEF0F6</color>
+    <color name="text_secondary">#4A4D5A</color>
+    <color name="next_up_bg">#3949AB</color>
+    <color name="next_up_text">#FFFFFF</color>
+    <color name="next_up_subtext">#DDE1FF</color>
+
+    <!-- Event status colours (shared with the user app). fg = text, bg = badge fill,
+         accent = dots / progress bars. -->
+    <color name="status_draft_fg">#3C4043</color>
+    <color name="status_draft_bg">#ECEEF1</color>
+    <color name="status_draft_accent">#5F6368</color>
+    <color name="status_upcoming_fg">#123E77</color>
+    <color name="status_upcoming_bg">#E3EDFB</color>
+    <color name="status_upcoming_accent">#1A5FB4</color>
+    <color name="status_live_fg">#14532D</color>
+    <color name="status_live_bg">#DFF3E4</color>
+    <color name="status_live_accent">#1B7F3B</color>
+    <color name="status_ended_fg">#5A5D6B</color>
+    <color name="status_ended_bg">#F0F0F0</color>
+    <color name="status_ended_accent">#8A8D99</color>
+    <color name="status_postponed_fg">#7C2D12</color>
+    <color name="status_postponed_bg">#FDEBD3</color>
+    <color name="status_postponed_accent">#C2410C</color>
+    <color name="status_cancelled_fg">#7F1D1D</color>
+    <color name="status_cancelled_bg">#FBE4E2</color>
+    <color name="status_cancelled_accent">#B42318</color>
 </resources>

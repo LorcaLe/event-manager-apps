@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Main screen: list of all events (feature c).
-    CoordinatorLayout lets the toolbar and the FAB react to scrolling.
+    Main screen (admin): dashboard + status filter + list of events (feature c).
+
+    The toolbar and the dashboard live in the AppBarLayout with scroll flags, so they
+    scroll away with the list, while the status chip bar (no scroll flag) stays pinned
+    at the top. This avoids nesting the dashboard inside the RecyclerView.
 -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -10,17 +13,177 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/screen_background"
     tools:context=".MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@color/screen_background"
+        app:liftOnScroll="false">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="@string/title_events" />
+            android:background="@color/screen_background"
+            app:layout_scrollFlags="scroll"
+            app:subtitle="@string/dashboard_caption"
+            app:title="@string/title_events"
+            app:titleTextAppearance="?attr/textAppearanceTitleLarge" />
+
+        <!-- ===== Dashboard ===== -->
+        <LinearLayout
+            android:id="@+id/dashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/screen_padding"
+            android:paddingTop="@dimen/space_xs"
+            app:layout_scrollFlags="scroll">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:baselineAligned="false"
+                android:orientation="horizontal">
+
+                <include
+                    android:id="@+id/statTotal"
+                    layout="@layout/view_stat_card" />
+
+                <Space
+                    android:layout_width="10dp"
+                    android:layout_height="0dp" />
+
+                <include
+                    android:id="@+id/statLive"
+                    layout="@layout/view_stat_card" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal">
+
+                <include
+                    android:id="@+id/statUpcoming"
+                    layout="@layout/view_stat_card" />
+
+                <Space
+                    android:layout_width="10dp"
+                    android:layout_height="0dp" />
+
+                <include
+                    android:id="@+id/statAttention"
+                    layout="@layout/view_stat_card" />
+            </LinearLayout>
+
+            <!-- Next up: the nearest upcoming published event -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardNextUp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/next_up_bg"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_m">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:letterSpacing="0.06"
+                            android:text="@string/next_up"
+                            android:textAllCaps="true"
+                            android:textColor="@color/next_up_subtext"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvNextUpCountdown"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_badge"
+                            android:backgroundTint="#29FFFFFF"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:textColor="@color/next_up_text"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            tools:text="Starts in 2 d 4 h" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvNextUpName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:textColor="@color/next_up_text"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        tools:text="Greenwich Tech Summit" />
+
+                    <TextView
+                        android:id="@+id/tvNextUpMeta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:textColor="@color/next_up_subtext"
+                        android:textSize="13sp"
+                        tools:text="28/11 – 30/11 · 09:00 · Hall A, Queen Anne" />
+
+                    <TextView
+                        android:id="@+id/tvNextUpSub"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/next_up_subtext"
+                        android:textSize="12sp"
+                        tools:text="6 sessions planned · synced" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- ===== Status filter (pinned) ===== -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipToPadding="false"
+            android:paddingHorizontal="@dimen/screen_padding"
+            android:paddingTop="@dimen/space_s"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:selectionRequired="true"
+                app:singleLine="true"
+                app:singleSelection="true" />
+        </HorizontalScrollView>
 
         <!-- Active advanced-search filters, shown as removable chips -->
         <HorizontalScrollView
@@ -29,7 +192,7 @@
             android:layout_height="wrap_content"
             android:clipToPadding="false"
             android:paddingHorizontal="@dimen/screen_padding"
-            android:paddingBottom="@dimen/space_s"
+            android:paddingBottom="@dimen/space_xs"
             android:scrollbars="none"
             android:visibility="gone">
 
@@ -57,23 +220,23 @@
         android:layout_height="match_parent"
         android:clipToPadding="false"
         android:paddingStart="@dimen/screen_padding"
-        android:paddingTop="@dimen/space_s"
+        android:paddingTop="@dimen/space_xs"
         android:paddingEnd="@dimen/screen_padding"
         android:paddingBottom="@dimen/fab_clearance"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:listitem="@layout/item_event" />
 
-    <!-- Shown instead of the list when there are no events -->
+    <!-- Shown instead of the list when there are no events (below the app bar) -->
     <LinearLayout
         android:id="@+id/emptyState"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:gravity="center"
         android:orientation="vertical"
         android:padding="@dimen/space_xl"
         android:visibility="gone"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:visibility="visible">
 
         <TextView
