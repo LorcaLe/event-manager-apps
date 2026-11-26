@@ -12,6 +12,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
@@ -25,6 +26,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
@@ -45,6 +47,8 @@ import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 
@@ -56,14 +60,17 @@ import java.util.Map;
  *  - Status chips (All / Live / Upcoming / Draft / Postponed / Cancelled / Ended) filter
  *    the search results in Java, after the database query.
  * All criteria combine; active filters are shown as chips that can be removed.
+ *  - Multi-select: long press a card, tap others to add them, then Delete (confirmed).
  */
 public class MainActivity extends AppCompatActivity {
 
     /** Pseudo-status for the "All" chip. */
     private static final String FILTER_ALL = "ALL";
+    /** Pseudo-status for "Needs attention": drafts and events not yet synced. */
+    private static final String FILTER_ATTENTION = "ATTENTION";
     /** Order of the status chips. */
     private static final String[] FILTERS = {
-            FILTER_ALL, EventStatus.ONGOING, EventStatus.UPCOMING, EventStatus.DRAFT,
+            FILTER_ALL, FILTER_ATTENTION, EventStatus.ONGOING, EventStatus.UPCOMING, EventStatus.DRAFT,
             EventStatus.POSTPONED, EventStatus.CANCELLED, EventStatus.ENDED
     };
     private static final long REFRESH_MS = 60_000L;   // countdowns update every minute
@@ -99,6 +106,19 @@ public class MainActivity extends AppCompatActivity {
     private LinearProgressIndicator syncProgress;
     private boolean syncing;
 
+    // Multi-select delete
+    private final Set<Long> selectedIds = new LinkedHashSet<>();
+    private boolean selectionMode;
+    private List<Event> shownEvents = new ArrayList<>();
+    private View selectionBar;
+    private TextView tvSelectionCount;
+    private final OnBackPressedCallback exitSelectionOnBack = new OnBackPressedCallback(false) {
+        @Override
+        public void handleOnBackPressed() {
+            exitSelectionMode();
+        }
+    };
+
     // Current search criteria (null / "" = not used)
     private String keyword = "";
     private String filterDateIso;
@@ -129,8 +149,9 @@ public class MainActivity extends AppCompatActivity {
         bindDashboard();
         setupStatusChips();
 
-        adapter = new EventAdapter(this::openEventDetail);
+        adapter = new EventAdapter(this::onEventClick, this::onEventLongClick);
         rvEvents.setAdapter(adapter);
+        setupSelectionBar();
 
         fabAddEvent.setOnClickListener(v -> openAddEvent());
         shrinkFabOnScroll();
@@ -234,12 +255,29 @@ public class MainActivity extends AppCompatActivity {
         for (Event e : found) {
             String status = EventStatus.displayStatus(e, now);
             counts.put(status, counts.get(status) + 1);
-            if (FILTER_ALL.equals(statusFilter) || statusFilter.equals(status)) {
+            boolean attention = needsAttention(e, status);
+            if (attention) counts.put(FILTER_ATTENTION, counts.get(FILTER_ATTENTION) + 1);
+            if (FILTER_ALL.equals(statusFilter)
+                    || statusFilter.equals(status)
+                    || (FILTER_ATTENTION.equals(statusFilter) && attention)) {
                 shown.add(e);
             }
         }
         counts.put(FILTER_ALL, found.size());
         updateStatusChips(counts);
+
+        shownEvents = shown;
+        if (selectionMode) {
+            // Drop selected events that are no longer listed (filtered out, deleted elsewhere)
+            Set<Long> visibleIds = new LinkedHashSet<>();
+            for (Event e : shown) visibleIds.add(e.getId());
+            selectedIds.retainAll(visibleIds);
+            if (selectedIds.isEmpty()) {
+                exitSelectionMode();
+            } else {
+                updateSelectionUi();
+            }
+        }
 
         adapter.setNow(now);
         adapter.submitList(shown);
@@ -289,6 +327,7 @@ public class MainActivity extends AppCompatActivity {
         statLive.setOnClickListener(v -> selectStatusFilter(EventStatus.ONGOING));
         statUpcoming.setOnClickListener(v -> selectStatusFilter(EventStatus.UPCOMING));
         statTotal.setOnClickListener(v -> selectStatusFilter(FILTER_ALL));
+        statAttention.setOnClickListener(v -> selectStatusFilter(FILTER_ATTENTION));
         cardNextUp.setOnClickListener(v -> {
             if (nextUpEvent != null) openEventDetail(nextUpEvent);
         });
@@ -339,7 +378,7 @@ public class MainActivity extends AppCompatActivity {
             boolean draft = EventStatus.DRAFT.equals(status);
             if (draft) drafts++;
             if (e.isDirty()) notSynced++;
-            if (draft || e.isDirty()) attention++;
+            if (needsAttention(e, status)) attention++;
         }
 
         setStat(statTotal, all.size(),
@@ -395,7 +434,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void selectStatusFilter(String filter) {
         Chip chip = statusChips.get(filter);
-        if (chip != null) chip.setChecked(true);
+        if (chip == null) return;
+        chip.setVisibility(View.VISIBLE);   // a chip with count 0 is hidden; show it once selected
+        chip.setChecked(true);
+    }
+
+    /** Drafts (hidden from users) and events with changes not yet uploaded. */
+    private static boolean needsAttention(Event e, String displayStatus) {
+        return EventStatus.DRAFT.equals(displayStatus) || e.isDirty();
     }
 
     /** "Live 1", "Draft 2"... Empty statuses are hidden (except All and the selected one). */
@@ -404,9 +450,14 @@ public class MainActivity extends AppCompatActivity {
             String filter = entry.getKey();
             Chip chip = entry.getValue();
             int count = counts.get(filter);
-            String label = FILTER_ALL.equals(filter)
-                    ? getString(R.string.filter_all)
-                    : EventFormat.statusLabel(this, filter);
+            String label;
+            if (FILTER_ALL.equals(filter)) {
+                label = getString(R.string.filter_all);
+            } else if (FILTER_ATTENTION.equals(filter)) {
+                label = getString(R.string.dash_needs_attention);
+            } else {
+                label = EventFormat.statusLabel(this, filter);
+            }
             chip.setText(getString(R.string.format_filter_chip, label, count));
             boolean visible = FILTER_ALL.equals(filter) || count > 0 || filter.equals(statusFilter);
             chip.setVisibility(visible ? View.VISIBLE : View.GONE);
@@ -568,6 +619,93 @@ public class MainActivity extends AppCompatActivity {
 
     private void openAddEvent() {
         startActivity(new Intent(this, EventFormActivity.class));
+    }
+
+    // =====================================================================
+    // Multi-select delete
+    // =====================================================================
+
+    private void setupSelectionBar() {
+        selectionBar = findViewById(R.id.selectionBar);
+        tvSelectionCount = findViewById(R.id.tvSelectionCount);
+        findViewById(R.id.btnCancelSelection).setOnClickListener(v -> exitSelectionMode());
+        findViewById(R.id.btnSelectAll).setOnClickListener(v -> {
+            for (Event e : shownEvents) selectedIds.add(e.getId());
+            updateSelectionUi();
+        });
+        findViewById(R.id.btnDeleteSelected).setOnClickListener(v -> confirmDeleteSelected());
+        getOnBackPressedDispatcher().addCallback(this, exitSelectionOnBack);
+    }
+
+    /** Tap: open the event, or (in selection mode) select / unselect it. */
+    private void onEventClick(Event event) {
+        if (selectionMode) {
+            toggleSelection(event);
+        } else {
+            openEventDetail(event);
+        }
+    }
+
+    /** Long press: start selection mode with this event, or toggle it if already selecting. */
+    private void onEventLongClick(Event event) {
+        if (!selectionMode) {
+            selectionMode = true;
+            exitSelectionOnBack.setEnabled(true);
+            fabAddEvent.hide();
+            selectionBar.setVisibility(View.VISIBLE);
+        }
+        toggleSelection(event);
+    }
+
+    private void toggleSelection(Event event) {
+        if (!selectedIds.remove(event.getId())) {
+            selectedIds.add(event.getId());
+        }
+        if (selectedIds.isEmpty()) {
+            exitSelectionMode();
+        } else {
+            updateSelectionUi();
+        }
+    }
+
+    private void updateSelectionUi() {
+        int n = selectedIds.size();
+        tvSelectionCount.setText(getResources().getQuantityString(R.plurals.selection_count, n, n));
+        adapter.setSelectedIds(new LinkedHashSet<>(selectedIds));
+    }
+
+    private void exitSelectionMode() {
+        selectionMode = false;
+        selectedIds.clear();
+        exitSelectionOnBack.setEnabled(false);
+        selectionBar.setVisibility(View.GONE);
+        fabAddEvent.show();
+        adapter.setSelectedIds(new LinkedHashSet<>());
+    }
+
+    /** Destructive: always confirm, and say how many sessions go with the events. */
+    private void confirmDeleteSelected() {
+        int events = selectedIds.size();
+        int sessions = 0;
+        for (Event e : shownEvents) {
+            if (selectedIds.contains(e.getId())) sessions += e.getSessionCount();
+        }
+        String message = sessions == 0
+                ? getString(R.string.delete_event_message_no_sessions)
+                : getResources().getQuantityString(R.plurals.delete_events_message, sessions, sessions);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getResources().getQuantityString(R.plurals.delete_events_title, events, events))
+                .setMessage(message)
+                .setPositiveButton(R.string.action_delete, (d, w) -> {
+                    db.deleteEvents(new ArrayList<>(selectedIds));
+                    exitSelectionMode();
+                    loadEvents();
+                    showSnackbar(getResources().getQuantityString(
+                            R.plurals.msg_events_deleted, events, events), null);
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
     }
 
     private void openEventDetail(Event event) {

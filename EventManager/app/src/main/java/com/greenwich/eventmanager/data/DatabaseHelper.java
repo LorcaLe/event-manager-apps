@@ -227,6 +227,33 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onLocalDataChanged();
     }
 
+    /**
+     * Deletes several events (and their sessions) in one transaction, e.g. from the
+     * multi-select mode of the event list. Same soft delete as deleteEvent().
+     */
+    public void deleteEvents(java.util.Collection<Long> eventIds) {
+        if (eventIds.isEmpty()) return;
+        SQLiteDatabase db = getWritableDatabase();
+        long now = System.currentTimeMillis();
+        db.beginTransaction();
+        try {
+            for (long eventId : eventIds) {
+                String[] args = {String.valueOf(eventId)};
+                db.delete(T_SESSIONS, S_EVENT_ID + " = ?", args);
+
+                ContentValues values = new ContentValues();
+                values.put(E_DELETED, 1);
+                values.put(E_DIRTY, 1);
+                values.put(E_UPDATED_AT, now);
+                db.update(T_EVENTS, values, E_ID + " = ?", args);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+        onLocalDataChanged();   // one background sync removes them all from the cloud
+    }
+
     /** Returns one event (with its session count), or null if not found. */
     public Event getEvent(long eventId) {
         List<Event> result = queryEvents("e." + E_ID + " = ?",

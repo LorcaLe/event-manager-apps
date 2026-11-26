@@ -32,6 +32,7 @@
     <color name="card_stroke">#E6E8F0</color>
     <color name="card_stroke_draft">#B9BDCB</color>
     <color name="meta_chip_bg">#EEF0F6</color>
+    <color name="field_bg">#F2F3F7</color>
     <color name="text_secondary">#4A4D5A</color>
     <color name="next_up_bg">#3949AB</color>
     <color name="next_up_text">#FFFFFF</color>

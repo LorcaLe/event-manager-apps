@@ -16,6 +16,7 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.Filter;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -32,6 +33,9 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.DateValidatorPointForward;
 import com.google.android.material.datepicker.MaterialDatePicker;
@@ -45,6 +49,7 @@ import com.greenwich.eventmanager.data.DatabaseHelper;
 import com.greenwich.eventmanager.model.Event;
 import com.greenwich.eventmanager.util.DateUtils;
 import com.greenwich.eventmanager.util.EventFormat;
+import com.greenwich.eventmanager.util.EventStatus;
 import com.greenwich.eventmanager.util.LocationHelper;
 
 import java.util.ArrayList;
@@ -55,15 +60,20 @@ import java.util.Locale;
 /**
  * Add / edit an event (feature a).
  *
- * Flow: fill in the form -> "Review details" -> validation ->
+ * Flow: fill in the form -> "Review & publish" or "Save as draft" -> validation ->
  *       EventConfirmActivity shows the details -> Save (or Edit to come back here).
+ *
+ * Status: a new event is either a draft (hidden from users) or published. Postponing /
+ * cancelling is done later from the event page ("Change status"); editing a published,
+ * postponed or cancelled event keeps its status.
  *
  * Pass EXTRA_EVENT_ID to edit an existing event; omit it to add a new one.
  *
  * Usability helpers:
  *  - End date / end time are filled in automatically from the start date / time
  *    (sensible defaults), until the user changes them by hand.
- *  - Choosing "Other" as the type reveals a field to name the type.
+ *  - Event type is picked from chips; "Other" reveals a field to name the type.
+ *  - Under the dates, a summary shows the length ("3 days") and when it starts.
  *  - Email and phone are checked as soon as the user leaves the field, then
  *    re-checked live while they correct it.
  */
@@ -100,9 +110,12 @@ public class EventFormActivity extends AppCompatActivity {
     private Double longitude;
 
     private TextInputLayout tilName, tilStartDate, tilEndDate, tilTime, tilEndTime, tilLocation,
-            tilOrganiser, tilType, tilOtherType, tilDescription, tilEmail, tilPhone,
-            tilStatus, tilStatusNote;
-    private MaterialAutoCompleteTextView actvType, actvLocation, actvStatus;
+            tilOrganiser, tilOtherType, tilDescription, tilEmail, tilPhone;
+    private MaterialAutoCompleteTextView actvLocation;
+    private ChipGroup chipGroupType;
+    private TextView tvTypeError, tvDuration, tvRelative, tvFormNote;
+    private View rowWhenSummary;
+    private MaterialButton btnSaveDraft, btnReview;
 
     // Location suggestions
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
@@ -140,9 +153,7 @@ public class EventFormActivity extends AppCompatActivity {
 
         db = DatabaseHelper.getInstance(this);
         bindViews();
-        actvType.setSimpleItems(Event.TYPES);
-        actvStatus.setSimpleItems(EventFormat.manualStatusLabels(this));
-        actvStatus.setText(EventFormat.statusLabel(this, Event.STATUS_PUBLISHED), false);
+        setupTypeChips();
 
         // Edit mode?
         long eventId = getIntent().getLongExtra(EXTRA_EVENT_ID, -1);
@@ -163,15 +174,17 @@ public class EventFormActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
 
         setupPickers();
-        setupTypeField();
-        setupStatusField();
         setupAutoFill();
+        if (editingEvent == null) {
+            applyDefaultDateTime();   // before change tracking: defaults are not "user changes"
+        }
+        setupWhenSummary();
         setupFieldValidationOnLeave();
         setupChangeTracking();   // after fillForm, so pre-filled values don't count as changes
         setupLocationField();
         setupBackHandling();
 
-        findViewById(R.id.btnReview).setOnClickListener(v -> onReviewClicked());
+        setupActionButtons();
     }
 
     private void bindViews() {
@@ -182,16 +195,19 @@ public class EventFormActivity extends AppCompatActivity {
         tilEndTime = findViewById(R.id.tilEndTime);
         tilLocation = findViewById(R.id.tilLocation);
         tilOrganiser = findViewById(R.id.tilOrganiser);
-        tilType = findViewById(R.id.tilType);
         tilOtherType = findViewById(R.id.tilOtherType);
         tilDescription = findViewById(R.id.tilDescription);
         tilEmail = findViewById(R.id.tilEmail);
         tilPhone = findViewById(R.id.tilPhone);
-        actvType = findViewById(R.id.actvType);
         actvLocation = findViewById(R.id.actvLocation);
-        tilStatus = findViewById(R.id.tilStatus);
-        tilStatusNote = findViewById(R.id.tilStatusNote);
-        actvStatus = findViewById(R.id.actvStatus);
+        chipGroupType = findViewById(R.id.chipGroupType);
+        tvTypeError = findViewById(R.id.tvTypeError);
+        rowWhenSummary = findViewById(R.id.rowWhenSummary);
+        tvDuration = findViewById(R.id.tvDuration);
+        tvRelative = findViewById(R.id.tvRelative);
+        tvFormNote = findViewById(R.id.tvFormNote);
+        btnSaveDraft = findViewById(R.id.btnSaveDraft);
+        btnReview = findViewById(R.id.btnReview);
     }
 
     private void fillForm(Event e) {
@@ -205,9 +221,9 @@ public class EventFormActivity extends AppCompatActivity {
 
         // A custom type is stored as its own text: show it as "Other" + the custom name
         if (Arrays.asList(Event.TYPES).contains(e.getType())) {
-            actvType.setText(e.getType(), false);   // false = don't filter the drop-down
+            checkTypeChip(e.getType());
         } else {
-            actvType.setText(Event.TYPE_OTHER, false);
+            checkTypeChip(Event.TYPE_OTHER);
             setText(tilOtherType, e.getType());
         }
         updateOtherTypeVisibility();
@@ -217,18 +233,15 @@ public class EventFormActivity extends AppCompatActivity {
         setText(tilPhone, e.getContactPhone());
         latitude = e.getLatitude();
         longitude = e.getLongitude();
-
-        actvStatus.setText(EventFormat.statusLabel(this, e.getStatus()), false);
-        setText(tilStatusNote, e.getStatusNote());
-        updateStatusNoteVisibility();
     }
 
     // =====================================================================
     // Validation (feature a)
     // =====================================================================
 
-    private void onReviewClicked() {
-        Event event = validateForm();
+    /** @param status status the event gets if saved (draft or published / unchanged) */
+    private void onReviewClicked(String status) {
+        Event event = validateForm(status);
         if (event == null) {
             Snackbar.make(findViewById(R.id.main), R.string.error_fix_fields,
                     Snackbar.LENGTH_SHORT).show();
@@ -243,7 +256,7 @@ public class EventFormActivity extends AppCompatActivity {
      * Checks every field, shows an error under each invalid one and focuses the first.
      * Returns the Event built from the form, or null if anything is invalid.
      */
-    private Event validateForm() {
+    private Event validateForm(String status) {
         TextInputLayout firstError = null;
 
         // --- Required: name
@@ -300,21 +313,12 @@ public class EventFormActivity extends AppCompatActivity {
             firstError = showError(tilOrganiser, getString(R.string.error_organiser_required), firstError);
         }
 
-        // --- Required: type, must be one of the list values
-        String type = text(tilType);
-        if (!Arrays.asList(Event.TYPES).contains(type)) {
-            firstError = showError(tilType, getString(R.string.error_type_required), firstError);
-        } else if (Event.TYPE_OTHER.equals(type) && !text(tilOtherType).isEmpty()) {
+        // --- Required: type, one of the chips
+        String type = selectedType();
+        boolean typeMissing = type == null;
+        tvTypeError.setVisibility(typeMissing ? View.VISIBLE : View.GONE);
+        if (Event.TYPE_OTHER.equals(type) && !text(tilOtherType).isEmpty()) {
             type = text(tilOtherType);   // store the user's own type name
-        }
-
-        // --- Required: status; a reason is required when postponed / cancelled
-        String status = selectedStatus();
-        String statusNote = text(tilStatusNote);
-        if (status == null) {
-            firstError = showError(tilStatus, getString(R.string.error_status_required), firstError);
-        } else if (Event.statusNeedsReason(status) && statusNote.isEmpty()) {
-            firstError = showError(tilStatusNote, getString(R.string.error_status_reason_required), firstError);
         }
 
         // --- Optional: email and phone format (only checked if something was entered)
@@ -341,9 +345,13 @@ public class EventFormActivity extends AppCompatActivity {
             }
         }
 
-        if (firstError != null) {
-            EditText field = firstError.getEditText();
-            if (field != null) field.requestFocus();
+        if (firstError != null || typeMissing) {
+            if (firstError != null) {
+                EditText field = firstError.getEditText();
+                if (field != null) field.requestFocus();
+            } else {
+                chipGroupType.requestFocus();
+            }
             return null;
         }
 
@@ -367,7 +375,9 @@ public class EventFormActivity extends AppCompatActivity {
         event.setContactEmail(emptyToNull(text(tilEmail)));
         event.setContactPhone(emptyToNull(text(tilPhone)));
         event.setStatus(status);
-        event.setStatusNote(Event.statusNeedsReason(status) ? statusNote : null);
+        // Postponed / cancelled keep their reason when the details are edited
+        event.setStatusNote(editingEvent != null && Event.statusNeedsReason(status)
+                ? editingEvent.getStatusNote() : null);
         return event;
     }
 
@@ -416,36 +426,69 @@ public class EventFormActivity extends AppCompatActivity {
     }
 
     // =====================================================================
-    // Status: Postponed / Cancelled reveal a required "Reason" field
+    // Buttons: draft vs publish
     // =====================================================================
 
-    /** Status code (Event.STATUS_*) for the label chosen in the drop-down, or null. */
-    private String selectedStatus() {
-        return EventFormat.manualStatusFromLabel(this, text(tilStatus));
-    }
-
-    private void setupStatusField() {
-        actvStatus.setOnItemClickListener((parent, view, position, id) -> updateStatusNoteVisibility());
-    }
-
-    private void updateStatusNoteVisibility() {
-        boolean needsReason = Event.statusNeedsReason(selectedStatus());
-        tilStatusNote.setVisibility(needsReason ? View.VISIBLE : View.GONE);
-        if (!needsReason) {
-            tilStatusNote.setError(null);
+    /**
+     * New event or draft: "Save as draft" + "Review & publish".
+     * Published / postponed / cancelled event: one "Review changes" button that keeps
+     * the status (it is changed from the event page).
+     */
+    private void setupActionButtons() {
+        boolean canChooseDraft = editingEvent == null
+                || Event.STATUS_DRAFT.equals(editingEvent.getStatus());
+        if (canChooseDraft) {
+            btnSaveDraft.setOnClickListener(v -> onReviewClicked(Event.STATUS_DRAFT));
+            btnReview.setText(R.string.action_review_publish);
+            btnReview.setOnClickListener(v -> onReviewClicked(Event.STATUS_PUBLISHED));
+            tvFormNote.setText(R.string.form_draft_note);
+        } else {
+            String keep = editingEvent.getStatus();
+            btnSaveDraft.setVisibility(View.GONE);
+            btnReview.setText(R.string.action_review_changes);
+            btnReview.setOnClickListener(v -> onReviewClicked(keep));
+            tvFormNote.setText(getString(R.string.form_edit_note, EventFormat.statusLabel(this, keep)));
         }
     }
 
     // =====================================================================
-    // Event type: "Other" reveals a free-text field
+    // Event type: chips; "Other" reveals a free-text field
     // =====================================================================
 
-    private void setupTypeField() {
-        actvType.setOnItemClickListener((parent, view, position, id) -> updateOtherTypeVisibility());
+    private void setupTypeChips() {
+        for (String type : Event.TYPES) {
+            Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_type_chip, chipGroupType, false);
+            chip.setId(View.generateViewId());
+            chip.setText(type);
+            chip.setTag(type);
+            chipGroupType.addView(chip);
+        }
+        chipGroupType.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            formChanged = true;
+            tvTypeError.setVisibility(View.GONE);
+            updateOtherTypeVisibility();
+        });
+    }
+
+    /** The chosen value from Event.TYPES, or null if no chip is selected. */
+    private String selectedType() {
+        int id = chipGroupType.getCheckedChipId();
+        View chip = id == View.NO_ID ? null : chipGroupType.findViewById(id);
+        return chip == null ? null : (String) chip.getTag();
+    }
+
+    private void checkTypeChip(String type) {
+        for (int i = 0; i < chipGroupType.getChildCount(); i++) {
+            View child = chipGroupType.getChildAt(i);
+            if (type.equals(child.getTag())) {
+                chipGroupType.check(child.getId());
+                return;
+            }
+        }
     }
 
     private void updateOtherTypeVisibility() {
-        boolean isOther = Event.TYPE_OTHER.equals(text(tilType));
+        boolean isOther = Event.TYPE_OTHER.equals(selectedType());
         tilOtherType.setVisibility(isOther ? View.VISIBLE : View.GONE);
         if (!isOther) {
             setText(tilOtherType, "");
@@ -479,6 +522,67 @@ public class EventFormActivity extends AppCompatActivity {
         onTextChanged(tilEndTime, () -> {
             if (!autoFilling) endTimeSetByUser = !text(tilEndTime).isEmpty();
         });
+    }
+
+    // =====================================================================
+    // Summary under the dates: "3 days · Starts in 2 d 4 h"
+    // =====================================================================
+
+    /**
+     * New event: start at the next whole hour today (tomorrow 09:00 if it is already late),
+     * so the date / time pills show real values to tap instead of empty boxes.
+     * Setting the start fills the end automatically (same day, +2 hours).
+     */
+    private void applyDefaultDateTime() {
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        int nextHour = c.get(java.util.Calendar.HOUR_OF_DAY) + 1;
+        if (nextHour > 21) {                       // too late to start today
+            c.add(java.util.Calendar.DAY_OF_MONTH, 1);
+            nextHour = 9;
+        }
+        String dateIso = String.format(Locale.US, "%04d-%02d-%02d",
+                c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH) + 1,
+                c.get(java.util.Calendar.DAY_OF_MONTH));
+        setText(tilStartDate, DateUtils.isoToDisplay(dateIso));
+        setText(tilTime, String.format(Locale.US, "%02d:00", nextHour));
+    }
+
+    private void setupWhenSummary() {
+        TextInputLayout[] fields = {tilStartDate, tilEndDate, tilTime, tilEndTime};
+        for (TextInputLayout til : fields) {
+            onTextChanged(til, this::updateWhenSummary);
+        }
+        updateWhenSummary();
+    }
+
+    private void updateWhenSummary() {
+        String startIso = DateUtils.displayToIso(text(tilStartDate));
+        if (startIso == null) {
+            rowWhenSummary.setVisibility(View.GONE);
+            return;
+        }
+        String endIso = DateUtils.displayToIso(text(tilEndDate));
+        if (endIso == null || endIso.compareTo(startIso) < 0) endIso = startIso;
+
+        // A temporary event, only to reuse the status / countdown rules
+        Event preview = new Event();
+        preview.setStartDate(startIso);
+        preview.setEndDate(endIso);
+        String start = text(tilTime);
+        String end = text(tilEndTime);
+        preview.setStartTime(DateUtils.isValidTime(start) ? start : null);
+        preview.setEndTime(DateUtils.isValidTime(end) ? end : null);
+
+        int days = DateUtils.daysBetweenInclusive(startIso, endIso);
+        tvDuration.setText(getResources().getQuantityString(R.plurals.day_count, days, days));
+
+        long now = System.currentTimeMillis();
+        boolean past = EventStatus.ENDED.equals(EventStatus.timeStatus(preview, now));
+        tvRelative.setText(past ? getString(R.string.form_in_the_past)
+                : EventFormat.countdown(this, preview, now));
+        tvRelative.setTextColor(ContextCompat.getColor(this,
+                past ? R.color.status_postponed_accent : R.color.text_secondary));
+        rowWhenSummary.setVisibility(View.VISIBLE);
     }
 
     /** Sets a field on the user's behalf without marking it as "chosen by the user". */
@@ -551,7 +655,7 @@ public class EventFormActivity extends AppCompatActivity {
 
     @SuppressLint("MissingPermission")  // permission is checked in useCurrentLocation()
     private void fetchCurrentLocation() {
-        tilLocation.setHelperText(getString(R.string.helper_location_finding));
+        showSnackbar(R.string.helper_location_finding);
 
         LocationServices.getFusedLocationProviderClient(this)
                 .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
@@ -586,11 +690,18 @@ public class EventFormActivity extends AppCompatActivity {
         updateLocationHelper();
     }
 
-    /** Helper text under Location tells the user whether a map position is attached. */
+    /**
+     * No helper line under Location (keeps the rows even): the pin icon turns green
+     * when a map position is attached, and stays the primary colour otherwise.
+     */
     private void updateLocationHelper() {
-        tilLocation.setHelperText(getString(latitude != null
-                ? R.string.helper_location_pinned
-                : R.string.helper_location_search));
+        boolean pinned = latitude != null;
+        tilLocation.setStartIconTintList(android.content.res.ColorStateList.valueOf(
+                pinned ? ContextCompat.getColor(this, R.color.status_live_accent)
+                        : com.google.android.material.color.MaterialColors.getColor(tilLocation,
+                        androidx.appcompat.R.attr.colorPrimary)));
+        tilLocation.setStartIconContentDescription(pinned
+                ? getString(R.string.helper_location_pinned) : null);
     }
 
     /**
@@ -631,13 +742,19 @@ public class EventFormActivity extends AppCompatActivity {
     // =====================================================================
 
     private void setupPickers() {
-        tilStartDate.setEndIconOnClickListener(v -> showDatePicker(tilStartDate, null));
-        tilEndDate.setEndIconOnClickListener(v ->
+        // Date pills are tapped to open the calendar (not typed)
+        setTapAction(tilStartDate, () -> showDatePicker(tilStartDate, null));
+        setTapAction(tilEndDate, () ->
                 // End date picker cannot go before the chosen start date
                 showDatePicker(tilEndDate, DateUtils.displayToIso(text(tilStartDate))));
 
         setupTimeField(tilTime);
         setupTimeField(tilEndTime);
+    }
+
+    private void setTapAction(TextInputLayout til, Runnable action) {
+        EditText field = til.getEditText();
+        if (field != null) field.setOnClickListener(v -> action.run());
     }
 
     private void setupTimeField(TextInputLayout til) {
@@ -701,8 +818,7 @@ public class EventFormActivity extends AppCompatActivity {
 
     private void setupChangeTracking() {
         TextInputLayout[] fields = {tilName, tilStartDate, tilEndDate, tilTime, tilEndTime,
-                tilLocation, tilOrganiser, tilType, tilOtherType, tilDescription, tilEmail, tilPhone,
-                tilStatus, tilStatusNote};
+                tilLocation, tilOrganiser, tilOtherType, tilDescription, tilEmail, tilPhone};
         for (TextInputLayout til : fields) {
             onTextChanged(til, () -> {
                 formChanged = true;

@@ -21,7 +21,9 @@ import com.greenwich.eventmanager.util.EventFormat;
 import com.greenwich.eventmanager.util.EventStatus;
 import com.greenwich.eventmanager.util.UiUtils;
 
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Shows events as cards in a RecyclerView.
@@ -32,6 +34,9 @@ import java.util.Objects;
  *
  * Time-based parts of a card (status, countdown, progress) depend on "now", which
  * the Activity passes with setNow() before submitting a list.
+ *
+ * Multi-select: a long press starts selection mode (handled by the Activity);
+ * selected cards get a primary outline and a check mark over the date block.
  */
 public class EventAdapter extends ListAdapter<Event, EventAdapter.EventViewHolder> {
 
@@ -40,12 +45,26 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.EventViewHolde
         void onEventClick(Event event);
     }
 
-    private final OnEventClickListener listener;
-    private long now = System.currentTimeMillis();
+    /** Long press: the Activity starts multi-select mode. */
+    public interface OnEventLongClickListener {
+        void onEventLongClick(Event event);
+    }
 
-    public EventAdapter(OnEventClickListener listener) {
+    private final OnEventClickListener listener;
+    private final OnEventLongClickListener longClickListener;
+    private long now = System.currentTimeMillis();
+    private Set<Long> selectedIds = Collections.emptySet();
+
+    public EventAdapter(OnEventClickListener listener, OnEventLongClickListener longClickListener) {
         super(DIFF_CALLBACK);
         this.listener = listener;
+        this.longClickListener = longClickListener;
+    }
+
+    /** Ids of the selected events (empty = not in selection mode). Re-binds the cards. */
+    public void setSelectedIds(Set<Long> ids) {
+        this.selectedIds = ids;
+        notifyItemRangeChanged(0, getItemCount());
     }
 
     /** Time used for statuses / countdowns. Visible cards are re-bound to show it. */
@@ -82,7 +101,8 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.EventViewHolde
 
     @Override
     public void onBindViewHolder(@NonNull EventViewHolder holder, int position) {
-        holder.bind(getItem(position), now, listener);
+        Event event = getItem(position);
+        holder.bind(event, now, selectedIds.contains(event.getId()), listener, longClickListener);
     }
 
     // ---------------------------------------------------------------------
@@ -94,12 +114,14 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.EventViewHolde
         private final TextView tvMonth, tvDay, tvName, tvStatusBadge, tvTime, tvLocation,
                 tvOrganiser, tvProgressLabel, tvReason, tvType, tvSessionCount, tvSyncStatus;
         private final View rowProgress;
+        private final View ivSelected;
         private final LinearProgressIndicator progress;
 
         EventViewHolder(@NonNull View itemView) {
             super(itemView);
             card = (MaterialCardView) itemView;
             dateBlock = itemView.findViewById(R.id.dateBlock);
+            ivSelected = itemView.findViewById(R.id.ivSelected);
             tvMonth = itemView.findViewById(R.id.tvMonth);
             tvDay = itemView.findViewById(R.id.tvDay);
             tvName = itemView.findViewById(R.id.tvEventName);
@@ -116,7 +138,8 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.EventViewHolde
             tvSyncStatus = itemView.findViewById(R.id.tvSyncStatus);
         }
 
-        void bind(Event event, long now, OnEventClickListener listener) {
+        void bind(Event event, long now, boolean selected, OnEventClickListener listener,
+                  OnEventLongClickListener longClickListener) {
             Context ctx = itemView.getContext();
             String status = EventStatus.displayStatus(event, now);
 
@@ -174,11 +197,24 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.EventViewHolde
             tvSyncStatus.setTextColor(ContextCompat.getColor(ctx,
                     pending ? R.color.status_pending : R.color.status_synced));
 
-            card.setStrokeColor(ContextCompat.getColor(ctx,
-                    draft ? R.color.card_stroke_draft : R.color.card_stroke));
-            itemView.setAlpha(EventStatus.ENDED.equals(status) ? 0.75f : 1f);
+            // Selection state (multi-select delete)
+            ivSelected.setVisibility(selected ? View.VISIBLE : View.GONE);
+            float density = ctx.getResources().getDisplayMetrics().density;
+            card.setStrokeWidth(Math.round(density * (selected ? 2 : 1)));
+            card.setStrokeColor(ContextCompat.getColor(ctx, selected ? R.color.md_primary
+                    : draft ? R.color.card_stroke_draft : R.color.card_stroke));
+            card.setCardBackgroundColor(selected
+                    ? ContextCompat.getColor(ctx, R.color.md_primary_container)
+                    : com.google.android.material.color.MaterialColors.getColor(card,
+                            com.google.android.material.R.attr.colorSurface));
+            itemView.setAlpha(EventStatus.ENDED.equals(status) && !selected ? 0.75f : 1f);
+            itemView.setActivated(selected);
 
             itemView.setOnClickListener(v -> listener.onEventClick(event));
+            itemView.setOnLongClickListener(v -> {
+                longClickListener.onEventLongClick(event);
+                return true;
+            });
         }
     }
 }

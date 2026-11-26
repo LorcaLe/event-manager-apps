@@ -11,25 +11,25 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.datepicker.CalendarConstraints;
-import com.google.android.material.datepicker.CompositeDateValidator;
-import com.google.android.material.datepicker.DateValidatorPointBackward;
-import com.google.android.material.datepicker.DateValidatorPointForward;
-import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
-import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputLayout;
 import com.greenwich.eventmanager.data.DatabaseHelper;
 import com.greenwich.eventmanager.model.Event;
 import com.greenwich.eventmanager.model.Session;
 import com.greenwich.eventmanager.util.DateUtils;
 import com.greenwich.eventmanager.util.EventFormat;
+import com.greenwich.eventmanager.util.EventStatus;
 import com.greenwich.eventmanager.util.UiUtils;
 
-import java.util.ArrayList;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import static com.greenwich.eventmanager.util.UiUtils.emptyToNull;
 import static com.greenwich.eventmanager.util.UiUtils.onTextChanged;
@@ -40,9 +40,11 @@ import static com.greenwich.eventmanager.util.UiUtils.text;
  * Add / edit / delete a session of an event (feature b).
  *
  * Pass EXTRA_EVENT_ID (required) and EXTRA_SESSION_ID (only when editing).
- *  - The date can only be picked within the event's start..end dates.
- *  - End time is suggested as start + 1 hour until the user picks their own.
- *  - Saving warns if the room is already used by another session at that time.
+ *  - The day is picked from chips, one per day of the event, so it is always in range.
+ *  - A new session starts when the last session of that day ends (or when the event
+ *    starts); the end time is suggested as start + 1 hour until the user picks their own.
+ *  - If the room is already used at that time, a warning appears under Room straight
+ *    away; the admin can still save.
  */
 public class SessionFormActivity extends AppCompatActivity {
 
@@ -50,6 +52,7 @@ public class SessionFormActivity extends AppCompatActivity {
     public static final String EXTRA_SESSION_ID = "extra_session_id";
 
     private static final int DEFAULT_DURATION_MINUTES = 60;
+    private static final int LATEST_SUGGESTED_START = 23 * 60;   // don't suggest after 23:00
 
     private DatabaseHelper db;
     private Event event;
@@ -57,11 +60,14 @@ public class SessionFormActivity extends AppCompatActivity {
 
     private boolean formChanged;
     private boolean autoFilling;
+    private boolean startTimeSetByUser;
     private boolean endTimeSetByUser;
+    private String selectedDateIso;
 
-    private TextInputLayout tilName, tilDate, tilStartTime, tilEndTime, tilType, tilOtherType,
+    private TextInputLayout tilName, tilStartTime, tilEndTime, tilOtherType,
             tilSpeaker, tilRoom, tilDescription;
-    private MaterialAutoCompleteTextView actvType;
+    private ChipGroup chipGroupType, chipGroupDays;
+    private TextView tvTypeError, tvSessionDuration, tvEventHours, tvRoomClash;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,36 +92,47 @@ public class SessionFormActivity extends AppCompatActivity {
         }
 
         bindViews();
-        actvType.setSimpleItems(Session.TYPES);
-        ((TextView) findViewById(R.id.tvEventName)).setText(
-                event.getName() + " · " + EventFormat.formatDates(this, event));
-
+        showEventContext();
         setupToolbar();
-        setupDateField();
+        setupTypeChips();
         setupTimeFields();
-        setupTypeField();
 
         if (editingSession != null) {
+            startTimeSetByUser = true;
             endTimeSetByUser = true;   // keep the saved end time (even if it was empty)
             fillForm(editingSession);
         }
+        setupDayChips();              // after fillForm: selects the session's day (or a default)
 
-        setupChangeTracking();   // after filling, so loaded values don't count as changes
+        setupLiveHints();
+        setupChangeTracking();        // after filling, so loaded values don't count as changes
         setupBackHandling();
         findViewById(R.id.btnSaveSession).setOnClickListener(v -> onSaveClicked());
     }
 
     private void bindViews() {
         tilName = findViewById(R.id.tilSessionName);
-        tilDate = findViewById(R.id.tilSessionDate);
         tilStartTime = findViewById(R.id.tilStartTime);
         tilEndTime = findViewById(R.id.tilEndTime);
-        tilType = findViewById(R.id.tilSessionType);
         tilOtherType = findViewById(R.id.tilOtherType);
         tilSpeaker = findViewById(R.id.tilSpeaker);
         tilRoom = findViewById(R.id.tilRoom);
         tilDescription = findViewById(R.id.tilDescription);
-        actvType = findViewById(R.id.actvSessionType);
+        chipGroupType = findViewById(R.id.chipGroupType);
+        chipGroupDays = findViewById(R.id.chipGroupDays);
+        tvTypeError = findViewById(R.id.tvTypeError);
+        tvSessionDuration = findViewById(R.id.tvSessionDuration);
+        tvEventHours = findViewById(R.id.tvEventHours);
+        tvRoomClash = findViewById(R.id.tvRoomClash);
+    }
+
+    /** "Adding to" card: date block, event name and dates. */
+    private void showEventContext() {
+        ((TextView) findViewById(R.id.tvCtxMonth)).setText(EventFormat.monthShort(event.getStartDate()));
+        ((TextView) findViewById(R.id.tvCtxDay)).setText(EventFormat.dayOfMonth(event.getStartDate()));
+        ((TextView) findViewById(R.id.tvCtxName)).setText(event.getName());
+        ((TextView) findViewById(R.id.tvCtxDates)).setText(EventFormat.formatShortDates(this, event));
+        tvEventHours.setText(getString(R.string.format_event_hours, EventFormat.formatTimes(this, event)));
     }
 
     private void setupToolbar() {
@@ -138,13 +155,13 @@ public class SessionFormActivity extends AppCompatActivity {
 
     private void fillForm(Session s) {
         setText(tilName, s.getName());
-        setText(tilDate, DateUtils.isoToDisplay(s.getSessionDate()));
+        selectedDateIso = s.getSessionDate();
         setText(tilStartTime, s.getStartTime());
         setText(tilEndTime, s.getEndTime());
         if (Arrays.asList(Session.TYPES).contains(s.getType())) {
-            setText(tilType, s.getType());
+            checkTypeChip(s.getType());
         } else {                                   // custom type typed under "Others"
-            setText(tilType, Session.TYPE_OTHERS);
+            checkTypeChip(Session.TYPE_OTHERS);
             setText(tilOtherType, s.getType());
         }
         updateOtherTypeVisibility();
@@ -154,48 +171,69 @@ public class SessionFormActivity extends AppCompatActivity {
     }
 
     // =====================================================================
-    // Date: limited to the event's own dates
+    // Day: one chip per day of the event
     // =====================================================================
 
-    private void setupDateField() {
-        String start = DateUtils.isoToDisplay(event.getStartDate());
-        if (!event.isMultiDay()) {
-            // Only one possible day: fill it in and lock the field
-            setText(tilDate, start);
-            tilDate.setEnabled(false);
-            tilDate.setHelperText(getString(R.string.helper_session_date_single));
-            return;
+    private void setupDayChips() {
+        long first = EventStatus.toMillis(event.getStartDate(), null);
+        int days = DateUtils.daysBetweenInclusive(event.getStartDate(), event.getEndDate());
+        String today = DateUtils.todayIso();
+        if (selectedDateIso == null) {
+            // New session: today if the event is running, otherwise its first day
+            selectedDateIso = DateUtils.isWithinRange(today, event.getStartDate(), event.getEndDate())
+                    ? today : event.getStartDate();
         }
-        tilDate.setHelperText(getString(R.string.helper_session_date_range,
-                start, DateUtils.isoToDisplay(event.getEndDate())));
-        tilDate.setEndIconOnClickListener(v -> showDatePicker());
-        EditText field = tilDate.getEditText();
-        if (field != null) field.setOnClickListener(v -> showDatePicker());
+
+        SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        SimpleDateFormat shortDay = new SimpleDateFormat("EEE dd", Locale.US);
+        SimpleDateFormat longDay = new SimpleDateFormat("EEE dd MMM", Locale.US);
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(first);
+        for (int i = 1; i <= days; i++) {
+            Date date = c.getTime();
+            String iso = isoFormat.format(date);
+            Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_type_chip, chipGroupDays, false);
+            chip.setId(View.generateViewId());
+            chip.setTag(iso);
+            chip.setText(days == 1 ? longDay.format(date)
+                    : getString(R.string.format_day_chip, i, shortDay.format(date)));
+            chipGroupDays.addView(chip);
+            if (iso.equals(selectedDateIso)) chipGroupDays.check(chip.getId());
+            c.add(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        chipGroupDays.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.isEmpty()) return;
+            selectedDateIso = (String) group.findViewById(checkedIds.get(0)).getTag();
+            formChanged = true;
+            if (!startTimeSetByUser) suggestStartTime();
+            updateRoomClash();
+        });
+
+        if (editingSession == null) suggestStartTime();
     }
 
-    private void showDatePicker() {
-        long first = DateUtils.isoToUtcMillis(event.getStartDate());
-        long last = DateUtils.isoToUtcMillis(event.getEndDate());
+    /**
+     * New session: start when the latest session of that day ends, so sessions follow
+     * each other; with no session yet, start when the event starts.
+     */
+    private void suggestStartTime() {
+        int startMinutes = toMinutes(event.getStartTime());
+        for (Session s : db.getSessionsForEvent(event.getId())) {
+            if (!s.getSessionDate().equals(selectedDateIso)) continue;
+            int end = s.getEndTime() != null && DateUtils.isValidTime(s.getEndTime())
+                    ? toMinutes(s.getEndTime())
+                    : toMinutes(s.getStartTime()) + DEFAULT_DURATION_MINUTES;
+            startMinutes = Math.max(startMinutes, end);
+        }
+        startMinutes = Math.min(startMinutes, LATEST_SUGGESTED_START);
+        autoFilling = true;
+        setText(tilStartTime, String.format(Locale.US, "%02d:%02d", startMinutes / 60, startMinutes % 60));
+        autoFilling = false;
+    }
 
-        // Only days from the event start to the event end can be selected
-        List<CalendarConstraints.DateValidator> rules = new ArrayList<>();
-        rules.add(DateValidatorPointForward.from(first));
-        rules.add(DateValidatorPointBackward.before(last));
-        CalendarConstraints constraints = new CalendarConstraints.Builder()
-                .setStart(first)
-                .setEnd(last)
-                .setValidator(CompositeDateValidator.allOf(rules))
-                .build();
-
-        String currentIso = DateUtils.displayToIso(text(tilDate));
-        MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText(R.string.title_pick_date)
-                .setCalendarConstraints(constraints)
-                .setSelection(currentIso != null ? DateUtils.isoToUtcMillis(currentIso) : first)
-                .build();
-        picker.addOnPositiveButtonClickListener(selection ->
-                setText(tilDate, DateUtils.isoToDisplay(DateUtils.utcMillisToIso(selection))));
-        picker.show(getSupportFragmentManager(), "session_date_picker");
+    private static int toMinutes(String hhmm) {
+        return Integer.parseInt(hhmm.substring(0, 2)) * 60 + Integer.parseInt(hhmm.substring(3, 5));
     }
 
     // =====================================================================
@@ -207,11 +245,13 @@ public class SessionFormActivity extends AppCompatActivity {
         setupTimeField(tilEndTime);
 
         onTextChanged(tilStartTime, () -> {
+            if (!autoFilling) startTimeSetByUser = true;
             String start = text(tilStartTime);
             if (DateUtils.isValidTime(start) && !endTimeSetByUser) {
+                boolean wasAutoFilling = autoFilling;
                 autoFilling = true;
                 setText(tilEndTime, DateUtils.addMinutesCapped(start, DEFAULT_DURATION_MINUTES));
-                autoFilling = false;
+                autoFilling = wasAutoFilling;
             }
         });
         onTextChanged(tilEndTime, () -> {
@@ -222,25 +262,125 @@ public class SessionFormActivity extends AppCompatActivity {
     private void setupTimeField(TextInputLayout til) {
         // Default the clock to the event's start hour, e.g. 09:00
         int defaultHour = Integer.parseInt(event.getStartTime().substring(0, 2));
-        til.setEndIconOnClickListener(v ->
-                UiUtils.showTimePicker(this, til, defaultHour));
         EditText field = til.getEditText();
         if (field != null) {
-            field.setOnClickListener(v ->
-                    UiUtils.showTimePicker(this, til, defaultHour));
+            field.setOnClickListener(v -> UiUtils.showTimePicker(this, til, defaultHour));
         }
     }
 
     // =====================================================================
-    // Type: "Others" reveals a free-text field
+    // Live hints: session length + room clash
     // =====================================================================
 
-    private void setupTypeField() {
-        actvType.setOnItemClickListener((p, v, pos, id) -> updateOtherTypeVisibility());
+    private void setupLiveHints() {
+        TextInputLayout[] fields = {tilStartTime, tilEndTime, tilRoom};
+        for (TextInputLayout til : fields) {
+            onTextChanged(til, () -> {
+                updateDuration();
+                updateRoomClash();
+            });
+        }
+        updateDuration();
+        updateRoomClash();
+    }
+
+    /** "1 h", "45 min", "1 h 30 min" (no end time = the default 60 minutes). */
+    private void updateDuration() {
+        String start = text(tilStartTime);
+        String end = text(tilEndTime);
+        if (!DateUtils.isValidTime(start)) {
+            tvSessionDuration.setVisibility(View.GONE);
+            return;
+        }
+        int minutes = DateUtils.isValidTime(end) ? toMinutes(end) - toMinutes(start)
+                : DEFAULT_DURATION_MINUTES;
+        if (minutes <= 0) {
+            tvSessionDuration.setVisibility(View.GONE);
+            return;
+        }
+        String label;
+        if (minutes < 60) {
+            label = getString(R.string.duration_minutes, minutes);
+        } else if (minutes % 60 == 0) {
+            label = getString(R.string.duration_hours, minutes / 60);
+        } else {
+            label = getString(R.string.duration_hours_minutes, minutes / 60, minutes % 60);
+        }
+        tvSessionDuration.setText(label);
+        tvSessionDuration.setVisibility(View.VISIBLE);
+    }
+
+    /** Warns under Room as soon as another session uses it at the same time. */
+    private void updateRoomClash() {
+        Session probe = buildProbe();
+        List<Session> clashes = probe == null ? null : db.findRoomClashes(probe);
+        if (clashes == null || clashes.isEmpty()) {
+            tvRoomClash.setVisibility(View.GONE);
+            return;
+        }
+        Session first = clashes.get(0);
+        String range = EventFormat.formatTimeRange(this, first.getStartTime(), first.getEndTime());
+        int others = clashes.size() - 1;
+        tvRoomClash.setText(others == 0
+                ? getString(R.string.room_clash_inline, probe.getRoom(), range, first.getName())
+                : getResources().getQuantityString(R.plurals.room_clash_inline_more, others,
+                        probe.getRoom(), range, first.getName(), others));
+        tvRoomClash.setVisibility(View.VISIBLE);
+    }
+
+    /** Session with only the fields the clash check needs, or null if they are incomplete. */
+    private Session buildProbe() {
+        String room = text(tilRoom);
+        String start = text(tilStartTime);
+        if (room.isEmpty() || selectedDateIso == null || !DateUtils.isValidTime(start)) return null;
+        Session s = new Session();
+        s.setId(editingSession == null ? 0 : editingSession.getId());
+        s.setEventId(event.getId());
+        s.setRoom(room);
+        s.setSessionDate(selectedDateIso);
+        s.setStartTime(start);
+        String end = text(tilEndTime);
+        s.setEndTime(DateUtils.isValidTime(end) ? end : null);
+        return s;
+    }
+
+    // =====================================================================
+    // Type: chips; "Others" reveals a free-text field
+    // =====================================================================
+
+    private void setupTypeChips() {
+        for (String type : Session.TYPES) {
+            Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_type_chip, chipGroupType, false);
+            chip.setId(View.generateViewId());
+            chip.setText(type);
+            chip.setTag(type);
+            chipGroupType.addView(chip);
+        }
+        chipGroupType.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            formChanged = true;
+            tvTypeError.setVisibility(View.GONE);
+            updateOtherTypeVisibility();
+        });
+    }
+
+    private String selectedType() {
+        int id = chipGroupType.getCheckedChipId();
+        View chip = id == View.NO_ID ? null : chipGroupType.findViewById(id);
+        return chip == null ? null : (String) chip.getTag();
+    }
+
+    private void checkTypeChip(String type) {
+        for (int i = 0; i < chipGroupType.getChildCount(); i++) {
+            View child = chipGroupType.getChildAt(i);
+            if (type.equals(child.getTag())) {
+                chipGroupType.check(child.getId());
+                return;
+            }
+        }
     }
 
     private void updateOtherTypeVisibility() {
-        boolean isOther = Session.TYPE_OTHERS.equals(text(tilType));
+        boolean isOther = Session.TYPE_OTHERS.equals(selectedType());
         tilOtherType.setVisibility(isOther ? View.VISIBLE : View.GONE);
         if (!isOther) setText(tilOtherType, "");
     }
@@ -256,14 +396,8 @@ public class SessionFormActivity extends AppCompatActivity {
                     Snackbar.LENGTH_SHORT).show();
             return;
         }
-
-        // Extra feature: warn if the room is double-booked, but let the admin decide
-        List<Session> clashes = db.findRoomClashes(session);
-        if (clashes.isEmpty()) {
-            save(session);
-        } else {
-            showRoomClashDialog(session, clashes);
-        }
+        // A room clash is already shown under Room; it does not block saving
+        save(session);
     }
 
     private Session validateForm() {
@@ -274,14 +408,9 @@ public class SessionFormActivity extends AppCompatActivity {
             firstError = showError(tilName, getString(R.string.error_session_name_required), firstError);
         }
 
-        String dateIso = DateUtils.displayToIso(text(tilDate));
-        if (dateIso == null) {
-            firstError = showError(tilDate, getString(R.string.error_session_date_required), firstError);
-        } else if (!DateUtils.isWithinRange(dateIso, event.getStartDate(), event.getEndDate())) {
-            firstError = showError(tilDate, getString(R.string.error_session_date_range,
-                    DateUtils.isoToDisplay(event.getStartDate()),
-                    DateUtils.isoToDisplay(event.getEndDate())), firstError);
-        }
+        // The day chips only offer the event's days; this is a safety net
+        boolean dateOk = selectedDateIso != null
+                && DateUtils.isWithinRange(selectedDateIso, event.getStartDate(), event.getEndDate());
 
         String start = text(tilStartTime);
         if (!DateUtils.isValidTime(start)) {
@@ -293,16 +422,18 @@ public class SessionFormActivity extends AppCompatActivity {
             firstError = showError(tilEndTime, getString(R.string.error_end_time_before_start), firstError);
         }
 
-        String type = text(tilType);
-        if (!Arrays.asList(Session.TYPES).contains(type)) {
-            firstError = showError(tilType, getString(R.string.error_session_type_required), firstError);
-        } else if (Session.TYPE_OTHERS.equals(type) && !text(tilOtherType).isEmpty()) {
+        String type = selectedType();
+        boolean typeMissing = type == null;
+        tvTypeError.setVisibility(typeMissing ? View.VISIBLE : View.GONE);
+        if (Session.TYPE_OTHERS.equals(type) && !text(tilOtherType).isEmpty()) {
             type = text(tilOtherType);
         }
 
-        if (firstError != null) {
-            EditText field = firstError.getEditText();
-            if (field != null) field.requestFocus();
+        if (firstError != null || typeMissing || !dateOk) {
+            if (firstError != null) {
+                EditText field = firstError.getEditText();
+                if (field != null) field.requestFocus();
+            }
             return null;
         }
 
@@ -313,7 +444,7 @@ public class SessionFormActivity extends AppCompatActivity {
         }
         s.setEventId(event.getId());
         s.setName(name);
-        s.setSessionDate(dateIso);
+        s.setSessionDate(selectedDateIso);
         s.setStartTime(start);
         s.setEndTime(emptyToNull(end));
         s.setType(type);
@@ -326,25 +457,6 @@ public class SessionFormActivity extends AppCompatActivity {
     private TextInputLayout showError(TextInputLayout til, String message, TextInputLayout first) {
         til.setError(message);
         return first != null ? first : til;
-    }
-
-    private void showRoomClashDialog(Session session, List<Session> clashes) {
-        StringBuilder list = new StringBuilder();
-        for (Session c : clashes) {
-            list.append("• ").append(c.getName()).append(" (")
-                    .append(EventFormat.formatTimeRange(this, c.getStartTime(), c.getEndTime()))
-                    .append(")\n");
-        }
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.room_clash_title)
-                .setMessage(getString(R.string.room_clash_message,
-                        session.getRoom(), list.toString().trim()))
-                .setPositiveButton(R.string.action_save_anyway, (d, w) -> save(session))
-                .setNegativeButton(R.string.action_change, (d, w) -> {
-                    EditText room = tilRoom.getEditText();
-                    if (room != null) room.requestFocus();
-                })
-                .show();
     }
 
     private void save(Session session) {
@@ -377,11 +489,11 @@ public class SessionFormActivity extends AppCompatActivity {
     // =====================================================================
 
     private void setupChangeTracking() {
-        TextInputLayout[] fields = {tilName, tilDate, tilStartTime, tilEndTime, tilType,
+        TextInputLayout[] fields = {tilName, tilStartTime, tilEndTime,
                 tilOtherType, tilSpeaker, tilRoom, tilDescription};
         for (TextInputLayout til : fields) {
             onTextChanged(til, () -> {
-                formChanged = true;
+                if (!autoFilling) formChanged = true;
                 til.setError(null);
             });
         }
