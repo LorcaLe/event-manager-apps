@@ -17,6 +17,7 @@ public partial class FavouritesPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        Services.StatusBar.ApplyForPage();
         await _viewModel.LoadAsync();
     }
 

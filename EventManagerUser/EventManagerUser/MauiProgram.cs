@@ -34,6 +34,16 @@ public static class MauiProgram
         builder.Services.AddTransient<EventDetailViewModel>();   // a fresh one per event opened
         builder.Services.AddTransient<EventDetailPage>();
 
+#if ANDROID
+        // The native SearchView draws an underline ("search_plate"); the rounded field replaces it.
+        Microsoft.Maui.Handlers.SearchBarHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
+        {
+            var search = handler.PlatformView;
+            int plateId = search.Context?.Resources?.GetIdentifier("android:id/search_plate", null, null) ?? 0;
+            search.FindViewById(plateId)?.SetBackgroundColor(Android.Graphics.Color.Transparent);
+        });
+#endif
+
 #if DEBUG
         builder.Logging.AddDebug();
 #endif

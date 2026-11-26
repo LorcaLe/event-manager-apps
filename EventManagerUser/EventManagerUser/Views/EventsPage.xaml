@@ -155,8 +155,10 @@
                     </VerticalStackLayout>
                 </CollectionView.EmptyView>
 
+                <!-- Space so the Undo banner never covers the last card. (Not a BoxView:
+                     the implicit BoxView style paints a black background.) -->
                 <CollectionView.Footer>
-                    <BoxView HeightRequest="88" Color="Transparent" />
+                    <ContentView HeightRequest="88" />
                 </CollectionView.Footer>
 
                 <!-- Swipe left: Save / Not interested -->
