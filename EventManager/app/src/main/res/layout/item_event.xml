@@ -1,109 +1,230 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One row in the event list: a card with the key details of an event. -->
+<!--
+    One row in the event list: date block coloured by status | name + status badge,
+    time, location, organiser, progress (live events), reason (postponed/cancelled)
+    and a meta row (type · sessions · sync state).
+-->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    style="?attr/materialCardViewElevatedStyle"
+    android:id="@+id/cardEvent"
+    style="?attr/materialCardViewOutlinedStyle"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginVertical="6dp"
-    app:cardCornerRadius="@dimen/card_corner">
+    android:layout_marginVertical="5dp"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:cardCornerRadius="@dimen/card_corner"
+    app:strokeColor="@color/card_stroke"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="@dimen/space_m">
+        android:orientation="horizontal"
+        android:padding="14dp">
 
-        <!-- Name + sync status on one line -->
+        <!-- Calendar block: MON / DD, tinted with the status colour.
+             In multi-select mode a selected card shows a check mark on top of it. -->
+        <FrameLayout
+            android:layout_width="52dp"
+            android:layout_height="58dp">
+
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:id="@+id/dateBlock"
+            android:layout_width="52dp"
+            android:layout_height="58dp"
+            android:background="@drawable/bg_rounded_12"
+            android:gravity="center"
+            android:orientation="vertical"
+            tools:backgroundTint="@color/status_upcoming_bg">
 
             <TextView
-                android:id="@+id/tvEventName"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textAppearance="?attr/textAppearanceTitleMedium"
-                tools:text="Greenwich Tech Summit" />
-
-            <TextView
-                android:id="@+id/tvSyncStatus"
+                android:id="@+id/tvMonth"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_s"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                tools:text="Not synced"
-                tools:textColor="@color/status_pending" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tvEventDates"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_xs"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textColor="?attr/colorPrimary"
-            tools:text="10/11/2026 – 12/11/2026 · 3 days at 09:00" />
-
-        <TextView
-            android:id="@+id/tvEventLocation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_xs"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            tools:text="Location: Greenwich Campus, Hall A" />
-
-        <TextView
-            android:id="@+id/tvEventOrganiser"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            tools:text="Organiser: Computing Society" />
-
-        <!-- Event type + number of sessions -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_s"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipType"
-                style="@style/Widget.Material3.Chip.Suggestion"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxWidth="160dp"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:clickable="false"
-                android:focusable="false"
-                tools:text="Conference" />
+                android:letterSpacing="0.05"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="NOV"
+                tools:textColor="@color/status_upcoming_fg" />
 
             <TextView
-                android:id="@+id/tvSessionCount"
-                android:layout_width="0dp"
+                android:id="@+id/tvDay"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="end"
-                android:layout_marginStart="@dimen/space_m"
-                android:textAppearance="?attr/textAppearanceLabelLarge"
-                android:textColor="?attr/colorSecondary"
-                tools:text="4 sessions" />
+                android:textSize="20sp"
+                android:textStyle="bold"
+                tools:text="28"
+                tools:textColor="@color/status_upcoming_fg" />
         </LinearLayout>
 
+            <ImageView
+                android:id="@+id/ivSelected"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_rounded_12"
+                android:backgroundTint="?attr/colorPrimary"
+                android:contentDescription="@string/cd_selected"
+                android:scaleType="center"
+                android:src="@drawable/ic_check"
+                android:visibility="gone"
+                app:tint="?attr/colorOnPrimary" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Name + status badge -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvEventName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textStyle="bold"
+                    tools:text="Greenwich Tech Summit" />
+
+                <TextView
+                    android:id="@+id/tvStatusBadge"
+                    style="@style/Widget.EventManager.StatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_s"
+                    tools:text="UPCOMING" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvEventTime"
+                style="@style/Widget.EventManager.IconLine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                app:drawableStartCompat="@drawable/ic_time"
+                tools:text="28/11 – 30/11 · 09:00 · in 2 days" />
+
+            <TextView
+                android:id="@+id/tvEventLocation"
+                style="@style/Widget.EventManager.IconLine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                app:drawableStartCompat="@drawable/ic_location"
+                tools:text="Hall A, Queen Anne Court" />
+
+            <TextView
+                android:id="@+id/tvEventOrganiser"
+                style="@style/Widget.EventManager.IconLine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                app:drawableStartCompat="@drawable/ic_person"
+                tools:text="Computing Society" />
+
+            <!-- Live events: progress + "Day 2 of 3" -->
+            <LinearLayout
+                android:id="@+id/rowProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/progressEvent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="1000"
+                    app:indicatorColor="@color/status_live_accent"
+                    app:trackColor="@color/card_stroke"
+                    app:trackCornerRadius="3dp"
+                    app:trackThickness="6dp"
+                    tools:progress="550" />
+
+                <TextView
+                    android:id="@+id/tvProgressLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_s"
+                    android:textAppearance="?attr/textAppearanceLabelMedium"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Day 2 of 3" />
+            </LinearLayout>
+
+            <!-- Postponed / cancelled: reason line (no strike-through, colour + text only) -->
+            <TextView
+                android:id="@+id/tvReason"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_rounded_8"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="6dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:visibility="gone"
+                tools:backgroundTint="@color/status_cancelled_bg"
+                tools:text="Reason: venue unavailable due to maintenance"
+                tools:visibility="visible" />
+
+            <!-- Meta row: type · sessions / hidden · sync state -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvType"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_rounded_8"
+                    android:backgroundTint="@color/meta_chip_bg"
+                    android:ellipsize="end"
+                    android:maxWidth="140dp"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:singleLine="true"
+                    android:textAppearance="?attr/textAppearanceLabelMedium"
+                    android:textColor="?attr/colorOnSurface"
+                    tools:text="Conference" />
+
+                <TextView
+                    android:id="@+id/tvSessionCount"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_s"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textAppearance="?attr/textAppearanceLabelMedium"
+                    android:textColor="@color/text_secondary"
+                    tools:text="6 sessions" />
+
+                <TextView
+                    android:id="@+id/tvSyncStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_s"
+                    android:textAppearance="?attr/textAppearanceLabelMedium"
+                    android:textStyle="bold"
+                    tools:text="Synced"
+                    tools:textColor="@color/status_synced" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

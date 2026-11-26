@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary 
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
@@ -41,4 +41,43 @@
     <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
+    <!-- ===== Redesign: surfaces, text and status palette (shared with the admin app) ===== -->
+    <Color x:Key="HeroIndigo">#2E3A8C</Color>
+    <Color x:Key="PageLight">#FFFFFF</Color>
+    <Color x:Key="PageDark">#141418</Color>
+    <Color x:Key="CardLight">#FFFFFF</Color>
+    <Color x:Key="CardDark">#1E1F25</Color>
+    <Color x:Key="CardStrokeLight">#ECEDF2</Color>
+    <Color x:Key="CardStrokeDark">#34353D</Color>
+    <Color x:Key="FieldLight">#F2F3F7</Color>
+    <Color x:Key="FieldDark">#2A2B33</Color>
+    <Color x:Key="TextPrimaryLight">#16171D</Color>
+    <Color x:Key="TextPrimaryDark">#ECECF1</Color>
+    <Color x:Key="TextSecondaryLight">#4A4D5A</Color>
+    <Color x:Key="TextSecondaryDark">#C2C4CF</Color>
+    <Color x:Key="TextMutedLight">#5A5D6B</Color>
+    <Color x:Key="TextMutedDark">#A3A6B3</Color>
+    <Color x:Key="IndigoContainerLight">#E8EAFB</Color>
+    <Color x:Key="IndigoContainerDark">#283BA3</Color>
+    <Color x:Key="SaveYellow">#FCD34D</Color>
+    <Color x:Key="StarGold">#D97706</Color>
+    <Color x:Key="NotInterestedGrey">#3A3D4A</Color>
+    <Color x:Key="SnackbarBg">#1F2029</Color>
+    <Color x:Key="SnackbarAction">#A5B4FC</Color>
+
+    <Color x:Key="StatusDraftFg">#3C4043</Color>
+    <Color x:Key="StatusDraftBg">#ECEEF1</Color>
+    <Color x:Key="StatusUpcomingFg">#123E77</Color>
+    <Color x:Key="StatusUpcomingBg">#E3EDFB</Color>
+    <Color x:Key="StatusUpcomingAccent">#1A5FB4</Color>
+    <Color x:Key="StatusLiveFg">#14532D</Color>
+    <Color x:Key="StatusLiveBg">#DFF3E4</Color>
+    <Color x:Key="StatusLiveAccent">#1B7F3B</Color>
+    <Color x:Key="StatusEndedFg">#5A5D6B</Color>
+    <Color x:Key="StatusEndedBg">#F0F0F0</Color>
+    <Color x:Key="StatusPostponedFg">#7C2D12</Color>
+    <Color x:Key="StatusPostponedBg">#FDEBD3</Color>
+    <Color x:Key="StatusPostponedAccent">#C2410C</Color>
+    <Color x:Key="StatusCancelledFg">#7F1D1D</Color>
+    <Color x:Key="StatusCancelledBg">#FBE4E2</Color>
 </ResourceDictionary>

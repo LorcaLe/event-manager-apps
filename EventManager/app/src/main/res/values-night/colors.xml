@@ -23,4 +23,32 @@
     <color name="md_on_error">#690005</color>
     <color name="status_synced">#81C784</color>
     <color name="status_pending">#FFB74D</color>
+    <color name="screen_background">#141418</color>
+    <color name="card_stroke">#34353D</color>
+    <color name="card_stroke_draft">#5A5D6B</color>
+    <color name="meta_chip_bg">#2C2D35</color>
+    <color name="field_bg">#2A2B33</color>
+    <color name="text_secondary">#C2C4CF</color>
+    <color name="next_up_bg">#283BA3</color>
+    <color name="next_up_text">#FFFFFF</color>
+    <color name="next_up_subtext">#DDE1FF</color>
+
+    <color name="status_draft_fg">#D6D9DE</color>
+    <color name="status_draft_bg">#34373C</color>
+    <color name="status_draft_accent">#A0A4AA</color>
+    <color name="status_upcoming_fg">#C4DAF8</color>
+    <color name="status_upcoming_bg">#1D3557</color>
+    <color name="status_upcoming_accent">#7FB0F0</color>
+    <color name="status_live_fg">#BDE8C8</color>
+    <color name="status_live_bg">#1B3D26</color>
+    <color name="status_live_accent">#6CCB88</color>
+    <color name="status_ended_fg">#C4C6CF</color>
+    <color name="status_ended_bg">#33343A</color>
+    <color name="status_ended_accent">#8A8D99</color>
+    <color name="status_postponed_fg">#FBD3A8</color>
+    <color name="status_postponed_bg">#4A2A12</color>
+    <color name="status_postponed_accent">#F59E5B</color>
+    <color name="status_cancelled_fg">#F8C4BF</color>
+    <color name="status_cancelled_bg">#4C1D1D</color>
+    <color name="status_cancelled_accent">#F0857A</color>
 </resources>

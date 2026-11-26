@@ -183,6 +183,154 @@
     <string name="qr_hint">Scan with a phone camera to add this session to the calendar</string>
     <string name="action_share_qr">Share QR code</string>
     <string name="title_share_qr">Share QR code</string>
+    <!-- ===== Event status ===== -->
+    <string name="status_label_draft">Draft</string>
+    <string name="status_label_published">Published</string>
+    <string name="status_label_postponed">Postponed</string>
+    <string name="status_label_cancelled">Cancelled</string>
+    <string name="status_label_upcoming">Upcoming</string>
+    <string name="status_label_live">Live</string>
+    <string name="status_label_ended">Ended</string>
+    <string name="badge_draft">DRAFT</string>
+    <string name="badge_upcoming">UPCOMING</string>
+    <string name="badge_live">LIVE</string>
+    <string name="badge_happening_now">HAPPENING NOW</string>
+    <string name="badge_ended">ENDED</string>
+    <string name="badge_postponed">POSTPONED</string>
+    <string name="badge_cancelled">CANCELLED</string>
+    <string name="badge_auto">AUTO</string>
+
+    <string name="hint_status">Status *</string>
+    <string name="helper_status">Draft events are hidden from the user app</string>
+    <string name="hint_status_reason">Reason *</string>
+    <string name="helper_status_reason">Shown to users as a banner on the event</string>
+    <string name="error_status_required">Please choose the status</string>
+    <string name="error_status_reason_required">Please give a reason for postponing or cancelling</string>
+    <string name="label_status">Status</string>
+    <string name="label_status_reason">Reason</string>
+    <string name="format_reason">Reason: %1$s</string>
+
+    <!-- Countdown / relative times -->
+    <string name="countdown_starts_in">Starts in %1$s</string>
+    <string name="countdown_ends_in">Ends in %1$s</string>
+    <string name="countdown_ended">Ended</string>
+    <string name="format_day_of">Day %1$d of %2$d</string>
+    <string name="duration_days_hours">%1$d d %2$d h</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="duration_minutes">%1$d min</string>
+    <string name="relative_today">today</string>
+    <string name="relative_tomorrow">tomorrow</string>
+    <plurals name="relative_in_days">
+        <item quantity="one">in %d day</item>
+        <item quantity="other">in %d days</item>
+    </plurals>
+    <string name="format_meta_join">%1$s · %2$s</string>
+    <string name="format_started_at">Started %1$s</string>
+    <string name="format_starts_at">Starts %1$s</string>
+    <string name="format_ends_at">Ends %1$s</string>
+    <string name="format_ended_at">Ended %1$s</string>
+    <string name="card_hidden_from_users">Hidden from users</string>
+
+    <!-- Dashboard (main screen) -->
+    <string name="dashboard_caption">Admin · Greenwich</string>
+    <string name="dash_total_events">Total events</string>
+    <string name="dash_happening_now">Happening now</string>
+    <string name="dash_upcoming">Upcoming</string>
+    <string name="dash_needs_attention">Needs attention</string>
+    <plurals name="sessions_live">
+        <item quantity="one">%d session live</item>
+        <item quantity="other">%d sessions live</item>
+    </plurals>
+    <plurals name="upcoming_this_week">
+        <item quantity="one">%d this week</item>
+        <item quantity="other">%d this week</item>
+    </plurals>
+    <plurals name="draft_count">
+        <item quantity="one">%d draft</item>
+        <item quantity="other">%d drafts</item>
+    </plurals>
+    <plurals name="not_synced_count">
+        <item quantity="one">%d not synced</item>
+        <item quantity="other">%d not synced</item>
+    </plurals>
+    <string name="next_up">Next up</string>
+    <plurals name="sessions_planned">
+        <item quantity="one">%d session planned</item>
+        <item quantity="other">%d sessions planned</item>
+    </plurals>
+    <string name="sync_state_synced">synced</string>
+    <string name="sync_state_not_synced">not synced</string>
+    <string name="format_filter_chip">%1$s %2$d</string>
+    <string name="filter_all">All</string>
+    <string name="empty_filter_title">Nothing here</string>
+    <string name="empty_filter_message">No events have this status.</string>
+
+    <!-- Event detail: status card + change-status sheet -->
+    <string name="title_event_details">Event details</string>
+    <string name="action_change_status">Change status</string>
+    <string name="sheet_status_title">Change status</string>
+    <string name="status_desc_draft">Hidden from the user app</string>
+    <string name="status_desc_published">Upcoming → Live → Ended set by dates</string>
+    <string name="status_desc_postponed">Visible, with a warning banner</string>
+    <string name="status_desc_cancelled">Visible, marked as cancelled</string>
+    <string name="hint_reason_required">Reason (required)</string>
+    <string name="helper_reason_banner">Users who saved this event will see it as a banner.</string>
+    <string name="action_save_sync">Save &amp; sync</string>
+    <string name="msg_status_updated">Status updated and synced</string>
+    <string name="msg_status_saved_offline">Status saved. It will sync when you are back online.</string>
+    <string name="session_ended">Ended</string>
+
+    <!-- ===== Event form (calendar-app style) ===== -->
+    <string name="label_starts">Starts</string>
+    <string name="label_ends">Ends</string>
+    <string name="placeholder_time">HH:MM</string>
+    <string name="hint_description_optional">Description (optional)</string>
+    <string name="hint_email_optional">Contact email (optional)</string>
+    <string name="hint_phone_optional">Contact phone (optional)</string>
+    <string name="action_save_draft">Save as draft</string>
+    <string name="action_review_publish">Review &amp; publish</string>
+    <string name="action_review_changes">Review changes</string>
+    <string name="form_draft_note">Drafts stay hidden from the user app. Postpone or cancel later from the event page with Change status.</string>
+    <string name="form_edit_note">Status: %1$s. To postpone or cancel, use Change status on the event page.</string>
+    <string name="form_in_the_past">This date is in the past</string>
+
+    <!-- ===== Session form (calendar-app style) ===== -->
+    <string name="session_adding_to">Adding to</string>
+    <string name="label_day">Day</string>
+    <string name="format_day_chip">Day %1$d · %2$s</string>
+    <string name="format_event_hours">Event: %1$s</string>
+    <string name="hint_room_optional">Room (optional)</string>
+    <string name="hint_speaker_optional">Speaker (optional)</string>
+    <string name="action_save_session">Save session</string>
+    <string name="duration_hours">%1$d h</string>
+    <string name="room_clash_inline">%1$s is booked %2$s by “%3$s”. You can still save.</string>
+    <plurals name="room_clash_inline_more">
+        <item quantity="one">%1$s is booked %2$s by “%3$s” and %4$d other session. You can still save.</item>
+        <item quantity="other">%1$s is booked %2$s by “%3$s” and %4$d other sessions. You can still save.</item>
+    </plurals>
+
+    <!-- ===== Multi-select delete (event list) ===== -->
+    <plurals name="selection_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <string name="action_select_all">Select all</string>
+    <string name="action_delete_selected">Delete</string>
+    <string name="cd_cancel_selection">Cancel selection</string>
+    <string name="cd_selected">Selected</string>
+    <plurals name="delete_events_title">
+        <item quantity="one">Delete %d event?</item>
+        <item quantity="other">Delete %d events?</item>
+    </plurals>
+    <plurals name="delete_events_message">
+        <item quantity="one">This will also delete %d session. This cannot be undone.</item>
+        <item quantity="other">This will also delete %d sessions in total. This cannot be undone.</item>
+    </plurals>
+    <plurals name="msg_events_deleted">
+        <item quantity="one">%d event deleted</item>
+        <item quantity="other">%d events deleted</item>
+    </plurals>
+
     <!-- ===== Common ===== -->
     <string name="action_cancel">Cancel</string>
     <string name="action_delete">Delete</string>

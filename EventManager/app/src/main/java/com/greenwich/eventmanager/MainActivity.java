@@ -2,6 +2,8 @@ package com.greenwich.eventmanager;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -10,6 +12,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
@@ -17,11 +20,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
@@ -32,22 +37,65 @@ import com.greenwich.eventmanager.data.DatabaseHelper;
 import com.greenwich.eventmanager.data.SyncManager;
 import com.greenwich.eventmanager.data.SyncWorker;
 import com.greenwich.eventmanager.model.Event;
+import com.greenwich.eventmanager.model.Session;
 import com.greenwich.eventmanager.util.DateUtils;
+import com.greenwich.eventmanager.util.EventFormat;
+import com.greenwich.eventmanager.util.EventStatus;
 import com.greenwich.eventmanager.util.UiUtils;
 
+import androidx.core.content.ContextCompat;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Home screen: lists every event with its session count (feature c) and searches
- * them (feature d).
+ * Home screen (admin): a dashboard (totals, live, upcoming, needs attention, next up),
+ * a status filter, and every event with its session count (feature c) and search (feature d).
  *  - Quick search (toolbar): name starts with / description contains the text.
  *  - Advanced search (bottom sheet): events on a date and/or by an organiser.
+ *  - Status chips (All / Live / Upcoming / Draft / Postponed / Cancelled / Ended) filter
+ *    the search results in Java, after the database query.
  * All criteria combine; active filters are shown as chips that can be removed.
+ *  - Multi-select: long press a card, tap others to add them, then Delete (confirmed).
  */
 public class MainActivity extends AppCompatActivity {
 
+    /** Pseudo-status for the "All" chip. */
+    private static final String FILTER_ALL = "ALL";
+    /** Pseudo-status for "Needs attention": drafts and events not yet synced. */
+    private static final String FILTER_ATTENTION = "ATTENTION";
+    /** Order of the status chips. */
+    private static final String[] FILTERS = {
+            FILTER_ALL, FILTER_ATTENTION, EventStatus.ONGOING, EventStatus.UPCOMING, EventStatus.DRAFT,
+            EventStatus.POSTPONED, EventStatus.CANCELLED, EventStatus.ENDED
+    };
+    private static final long REFRESH_MS = 60_000L;   // countdowns update every minute
+    private static final long WEEK_MS = 7L * 24 * 60 * 60 * 1000;
+
     private DatabaseHelper db;
     private EventAdapter adapter;
+    private AppBarLayout appBar;
+    private ChipGroup chipGroupStatus;
+    private final Map<String, Chip> statusChips = new LinkedHashMap<>();
+    private String statusFilter = FILTER_ALL;
+
+    // Dashboard
+    private View statTotal, statLive, statUpcoming, statAttention, cardNextUp;
+    private TextView tvNextUpCountdown, tvNextUpName, tvNextUpMeta, tvNextUpSub;
+    private Event nextUpEvent;
+
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private final Runnable refreshTick = new Runnable() {
+        @Override
+        public void run() {
+            loadEvents();
+            refreshHandler.postDelayed(this, REFRESH_MS);
+        }
+    };
 
     private MaterialToolbar toolbar;
     private RecyclerView rvEvents;
@@ -57,6 +105,19 @@ public class MainActivity extends AppCompatActivity {
     private ExtendedFloatingActionButton fabAddEvent;
     private LinearProgressIndicator syncProgress;
     private boolean syncing;
+
+    // Multi-select delete
+    private final Set<Long> selectedIds = new LinkedHashSet<>();
+    private boolean selectionMode;
+    private List<Event> shownEvents = new ArrayList<>();
+    private View selectionBar;
+    private TextView tvSelectionCount;
+    private final OnBackPressedCallback exitSelectionOnBack = new OnBackPressedCallback(false) {
+        @Override
+        public void handleOnBackPressed() {
+            exitSelectionMode();
+        }
+    };
 
     // Current search criteria (null / "" = not used)
     private String keyword = "";
@@ -83,9 +144,14 @@ public class MainActivity extends AppCompatActivity {
         chipGroupFilters = findViewById(R.id.chipGroupFilters);
         fabAddEvent = findViewById(R.id.fabAddEvent);
         syncProgress = findViewById(R.id.syncProgress);
+        appBar = findViewById(R.id.appBar);
+        chipGroupStatus = findViewById(R.id.chipGroupStatus);
+        bindDashboard();
+        setupStatusChips();
 
-        adapter = new EventAdapter(this::openEventDetail);
+        adapter = new EventAdapter(this::onEventClick, this::onEventLongClick);
         rvEvents.setAdapter(adapter);
+        setupSelectionBar();
 
         fabAddEvent.setOnClickListener(v -> openAddEvent());
         shrinkFabOnScroll();
@@ -96,7 +162,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        loadEvents();
+        refreshHandler.post(refreshTick);     // loads now, then every minute
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        refreshHandler.removeCallbacks(refreshTick);
     }
 
     // =====================================================================
@@ -134,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
         searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
             @Override
             public boolean onMenuItemActionExpand(@NonNull MenuItem item) {
+                appBar.setExpanded(true, true);   // keep the search box in view
                 return true;
             }
 
@@ -168,23 +241,227 @@ public class MainActivity extends AppCompatActivity {
     // =====================================================================
 
     private void loadEvents() {
-        boolean filtering = !keyword.isEmpty() || filterDateIso != null || filterOrganiser != null;
-        List<Event> events = filtering
-                ? db.findEvents(keyword, filterDateIso, filterOrganiser)
-                : db.getAllEvents();
-        adapter.submitList(events);
+        long now = System.currentTimeMillis();
+        List<Event> all = db.getAllEvents();
+        boolean searching = !keyword.isEmpty() || filterDateIso != null || filterOrganiser != null;
+        List<Event> found = searching ? db.findEvents(keyword, filterDateIso, filterOrganiser) : all;
+
+        updateDashboard(all, now);
+
+        // Status chips: counts reflect the current search, then the selected chip filters it
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String f : FILTERS) counts.put(f, 0);
+        List<Event> shown = new ArrayList<>();
+        for (Event e : found) {
+            String status = EventStatus.displayStatus(e, now);
+            counts.put(status, counts.get(status) + 1);
+            boolean attention = needsAttention(e, status);
+            if (attention) counts.put(FILTER_ATTENTION, counts.get(FILTER_ATTENTION) + 1);
+            if (FILTER_ALL.equals(statusFilter)
+                    || statusFilter.equals(status)
+                    || (FILTER_ATTENTION.equals(statusFilter) && attention)) {
+                shown.add(e);
+            }
+        }
+        counts.put(FILTER_ALL, found.size());
+        updateStatusChips(counts);
+
+        shownEvents = shown;
+        if (selectionMode) {
+            // Drop selected events that are no longer listed (filtered out, deleted elsewhere)
+            Set<Long> visibleIds = new LinkedHashSet<>();
+            for (Event e : shown) visibleIds.add(e.getId());
+            selectedIds.retainAll(visibleIds);
+            if (selectedIds.isEmpty()) {
+                exitSelectionMode();
+            } else {
+                updateSelectionUi();
+            }
+        }
+
+        adapter.setNow(now);
+        adapter.submitList(shown);
 
         updateFilterChips();
-        toolbar.setSubtitle(filtering
-                ? getResources().getQuantityString(R.plurals.events_found, events.size(), events.size())
-                : null);
+        toolbar.setSubtitle(searching
+                ? getResources().getQuantityString(R.plurals.events_found, found.size(), found.size())
+                : getString(R.string.dashboard_caption));
 
-        // Different empty message for "no events at all" and "no search results"
-        boolean isEmpty = events.isEmpty();
+        // Different empty message for "no events at all", "no search results" and "no such status"
+        boolean isEmpty = shown.isEmpty();
         emptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
         rvEvents.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
-        tvEmptyTitle.setText(filtering ? R.string.empty_search_title : R.string.empty_events_title);
-        tvEmptyMessage.setText(filtering ? R.string.empty_search_message : R.string.empty_events_message);
+        if (searching && found.isEmpty()) {
+            tvEmptyTitle.setText(R.string.empty_search_title);
+            tvEmptyMessage.setText(R.string.empty_search_message);
+        } else if (!found.isEmpty()) {
+            tvEmptyTitle.setText(R.string.empty_filter_title);
+            tvEmptyMessage.setText(R.string.empty_filter_message);
+        } else {
+            tvEmptyTitle.setText(R.string.empty_events_title);
+            tvEmptyMessage.setText(R.string.empty_events_message);
+        }
+    }
+
+    // =====================================================================
+    // Dashboard
+    // =====================================================================
+
+    private void bindDashboard() {
+        statTotal = findViewById(R.id.statTotal);
+        statLive = findViewById(R.id.statLive);
+        statUpcoming = findViewById(R.id.statUpcoming);
+        statAttention = findViewById(R.id.statAttention);
+        cardNextUp = findViewById(R.id.cardNextUp);
+        tvNextUpCountdown = findViewById(R.id.tvNextUpCountdown);
+        tvNextUpName = findViewById(R.id.tvNextUpName);
+        tvNextUpMeta = findViewById(R.id.tvNextUpMeta);
+        tvNextUpSub = findViewById(R.id.tvNextUpSub);
+
+        setupStat(statTotal, R.string.dash_total_events, 0);
+        setupStat(statLive, R.string.dash_happening_now, R.color.status_live_accent);
+        setupStat(statUpcoming, R.string.dash_upcoming, R.color.status_upcoming_accent);
+        setupStat(statAttention, R.string.dash_needs_attention, 0);
+
+        // Tapping a number card selects the matching status chip
+        statLive.setOnClickListener(v -> selectStatusFilter(EventStatus.ONGOING));
+        statUpcoming.setOnClickListener(v -> selectStatusFilter(EventStatus.UPCOMING));
+        statTotal.setOnClickListener(v -> selectStatusFilter(FILTER_ALL));
+        statAttention.setOnClickListener(v -> selectStatusFilter(FILTER_ATTENTION));
+        cardNextUp.setOnClickListener(v -> {
+            if (nextUpEvent != null) openEventDetail(nextUpEvent);
+        });
+    }
+
+    /** Label + optional coloured dot; the value colour matches the dot. */
+    private void setupStat(View card, int labelRes, int accentColorRes) {
+        ((TextView) card.findViewById(R.id.statLabel)).setText(labelRes);
+        View dot = card.findViewById(R.id.statDot);
+        TextView value = card.findViewById(R.id.statValue);
+        if (accentColorRes != 0) {
+            int color = ContextCompat.getColor(this, accentColorRes);
+            dot.setVisibility(View.VISIBLE);
+            dot.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color));
+            value.setTextColor(color);
+        }
+    }
+
+    private void setStat(View card, int value, String sub) {
+        ((TextView) card.findViewById(R.id.statValue)).setText(String.valueOf(value));
+        ((TextView) card.findViewById(R.id.statSub)).setText(sub);
+    }
+
+    /** Numbers are computed over every event, independent of search / status filter. */
+    private void updateDashboard(List<Event> all, long now) {
+        int totalSessions = 0, live = 0, liveSessions = 0, upcoming = 0, thisWeek = 0;
+        int drafts = 0, notSynced = 0, attention = 0;
+        nextUpEvent = null;
+
+        for (Event e : all) {
+            totalSessions += e.getSessionCount();
+            String status = EventStatus.displayStatus(e, now);
+            if (EventStatus.ONGOING.equals(status)) {
+                live++;
+                for (Session s : db.getSessionsForEvent(e.getId())) {
+                    if (EventStatus.ONGOING.equals(EventStatus.sessionTimeStatus(s, now))) {
+                        liveSessions++;
+                    }
+                }
+            } else if (EventStatus.UPCOMING.equals(status)) {
+                upcoming++;
+                long start = EventStatus.startMillis(e);
+                if (start - now <= WEEK_MS) thisWeek++;
+                if (nextUpEvent == null || start < EventStatus.startMillis(nextUpEvent)) {
+                    nextUpEvent = e;
+                }
+            }
+            boolean draft = EventStatus.DRAFT.equals(status);
+            if (draft) drafts++;
+            if (e.isDirty()) notSynced++;
+            if (needsAttention(e, status)) attention++;
+        }
+
+        setStat(statTotal, all.size(),
+                getResources().getQuantityString(R.plurals.session_count, totalSessions, totalSessions));
+        setStat(statLive, live,
+                getResources().getQuantityString(R.plurals.sessions_live, liveSessions, liveSessions));
+        setStat(statUpcoming, upcoming,
+                getResources().getQuantityString(R.plurals.upcoming_this_week, thisWeek, thisWeek));
+        setStat(statAttention, attention, getString(R.string.format_meta_join,
+                getResources().getQuantityString(R.plurals.draft_count, drafts, drafts),
+                getResources().getQuantityString(R.plurals.not_synced_count, notSynced, notSynced)));
+        ((TextView) statAttention.findViewById(R.id.statValue)).setTextColor(ContextCompat.getColor(this,
+                attention > 0 ? R.color.status_postponed_accent : R.color.status_synced));
+
+        // Next up
+        cardNextUp.setVisibility(nextUpEvent == null ? View.GONE : View.VISIBLE);
+        if (nextUpEvent != null) {
+            Event e = nextUpEvent;
+            tvNextUpCountdown.setText(EventFormat.countdown(this, e, now));
+            tvNextUpName.setText(e.getName());
+            tvNextUpMeta.setText(getString(R.string.format_meta_join,
+                    getString(R.string.format_meta_join,
+                            EventFormat.formatShortDates(this, e), EventFormat.formatTimes(this, e)),
+                    e.getLocation()));
+            int count = e.getSessionCount();
+            tvNextUpSub.setText(getString(R.string.format_meta_join,
+                    getResources().getQuantityString(R.plurals.sessions_planned, count, count),
+                    getString(e.isDirty() ? R.string.sync_state_not_synced : R.string.sync_state_synced)));
+        }
+    }
+
+    // =====================================================================
+    // Status filter chips
+    // =====================================================================
+
+    private void setupStatusChips() {
+        for (String filter : FILTERS) {
+            Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_filter_chip,
+                    chipGroupStatus, false);
+            chip.setId(View.generateViewId());
+            chip.setTag(filter);
+            chipGroupStatus.addView(chip);
+            statusChips.put(filter, chip);
+        }
+        statusChips.get(FILTER_ALL).setChecked(true);
+        chipGroupStatus.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.isEmpty()) return;
+            Chip checked = group.findViewById(checkedIds.get(0));
+            statusFilter = (String) checked.getTag();
+            loadEvents();
+        });
+    }
+
+    private void selectStatusFilter(String filter) {
+        Chip chip = statusChips.get(filter);
+        if (chip == null) return;
+        chip.setVisibility(View.VISIBLE);   // a chip with count 0 is hidden; show it once selected
+        chip.setChecked(true);
+    }
+
+    /** Drafts (hidden from users) and events with changes not yet uploaded. */
+    private static boolean needsAttention(Event e, String displayStatus) {
+        return EventStatus.DRAFT.equals(displayStatus) || e.isDirty();
+    }
+
+    /** "Live 1", "Draft 2"... Empty statuses are hidden (except All and the selected one). */
+    private void updateStatusChips(Map<String, Integer> counts) {
+        for (Map.Entry<String, Chip> entry : statusChips.entrySet()) {
+            String filter = entry.getKey();
+            Chip chip = entry.getValue();
+            int count = counts.get(filter);
+            String label;
+            if (FILTER_ALL.equals(filter)) {
+                label = getString(R.string.filter_all);
+            } else if (FILTER_ATTENTION.equals(filter)) {
+                label = getString(R.string.dash_needs_attention);
+            } else {
+                label = EventFormat.statusLabel(this, filter);
+            }
+            chip.setText(getString(R.string.format_filter_chip, label, count));
+            boolean visible = FILTER_ALL.equals(filter) || count > 0 || filter.equals(statusFilter);
+            chip.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
     }
 
     /** One chip per advanced-search filter; ✕ removes it, tapping it reopens the sheet. */
@@ -342,6 +619,93 @@ public class MainActivity extends AppCompatActivity {
 
     private void openAddEvent() {
         startActivity(new Intent(this, EventFormActivity.class));
+    }
+
+    // =====================================================================
+    // Multi-select delete
+    // =====================================================================
+
+    private void setupSelectionBar() {
+        selectionBar = findViewById(R.id.selectionBar);
+        tvSelectionCount = findViewById(R.id.tvSelectionCount);
+        findViewById(R.id.btnCancelSelection).setOnClickListener(v -> exitSelectionMode());
+        findViewById(R.id.btnSelectAll).setOnClickListener(v -> {
+            for (Event e : shownEvents) selectedIds.add(e.getId());
+            updateSelectionUi();
+        });
+        findViewById(R.id.btnDeleteSelected).setOnClickListener(v -> confirmDeleteSelected());
+        getOnBackPressedDispatcher().addCallback(this, exitSelectionOnBack);
+    }
+
+    /** Tap: open the event, or (in selection mode) select / unselect it. */
+    private void onEventClick(Event event) {
+        if (selectionMode) {
+            toggleSelection(event);
+        } else {
+            openEventDetail(event);
+        }
+    }
+
+    /** Long press: start selection mode with this event, or toggle it if already selecting. */
+    private void onEventLongClick(Event event) {
+        if (!selectionMode) {
+            selectionMode = true;
+            exitSelectionOnBack.setEnabled(true);
+            fabAddEvent.hide();
+            selectionBar.setVisibility(View.VISIBLE);
+        }
+        toggleSelection(event);
+    }
+
+    private void toggleSelection(Event event) {
+        if (!selectedIds.remove(event.getId())) {
+            selectedIds.add(event.getId());
+        }
+        if (selectedIds.isEmpty()) {
+            exitSelectionMode();
+        } else {
+            updateSelectionUi();
+        }
+    }
+
+    private void updateSelectionUi() {
+        int n = selectedIds.size();
+        tvSelectionCount.setText(getResources().getQuantityString(R.plurals.selection_count, n, n));
+        adapter.setSelectedIds(new LinkedHashSet<>(selectedIds));
+    }
+
+    private void exitSelectionMode() {
+        selectionMode = false;
+        selectedIds.clear();
+        exitSelectionOnBack.setEnabled(false);
+        selectionBar.setVisibility(View.GONE);
+        fabAddEvent.show();
+        adapter.setSelectedIds(new LinkedHashSet<>());
+    }
+
+    /** Destructive: always confirm, and say how many sessions go with the events. */
+    private void confirmDeleteSelected() {
+        int events = selectedIds.size();
+        int sessions = 0;
+        for (Event e : shownEvents) {
+            if (selectedIds.contains(e.getId())) sessions += e.getSessionCount();
+        }
+        String message = sessions == 0
+                ? getString(R.string.delete_event_message_no_sessions)
+                : getResources().getQuantityString(R.plurals.delete_events_message, sessions, sessions);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getResources().getQuantityString(R.plurals.delete_events_title, events, events))
+                .setMessage(message)
+                .setPositiveButton(R.string.action_delete, (d, w) -> {
+                    db.deleteEvents(new ArrayList<>(selectedIds));
+                    exitSelectionMode();
+                    loadEvents();
+                    showSnackbar(getResources().getQuantityString(
+                            R.plurals.msg_events_deleted, events, events), null);
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
     }
 
     private void openEventDetail(Event event) {

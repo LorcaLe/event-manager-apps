@@ -23,6 +23,18 @@ public class Event implements Serializable {
             "Conference", "Workshop", "Seminar", "Meetup", "Exhibition", TYPE_OTHER
     };
 
+    // Manual status set by the admin. The time-based status (upcoming / ongoing /
+    // ended) is computed from the dates, see util.EventStatus.
+    public static final String STATUS_DRAFT = "DRAFT";
+    public static final String STATUS_PUBLISHED = "PUBLISHED";
+    public static final String STATUS_POSTPONED = "POSTPONED";
+    public static final String STATUS_CANCELLED = "CANCELLED";
+
+    /** Manual statuses in the order shown in the form and the change-status sheet. */
+    public static final String[] STATUSES = {
+            STATUS_DRAFT, STATUS_PUBLISHED, STATUS_POSTPONED, STATUS_CANCELLED
+    };
+
     private long id;
     private String uuid;
 
@@ -43,6 +55,10 @@ public class Event implements Serializable {
     private Double latitude;      // set when the location is picked from a search/GPS
     private Double longitude;
 
+    // Status
+    private String status = STATUS_PUBLISHED;
+    private String statusNote;    // reason, required when postponed or cancelled
+
     // Sync bookkeeping (feature e)
     private long updatedAt;       // epoch millis of the last local change
     private boolean dirty;        // true = changed locally, not yet uploaded
@@ -58,6 +74,11 @@ public class Event implements Serializable {
     /** True if the event lasts more than one day. */
     public boolean isMultiDay() {
         return endDate != null && !endDate.equals(startDate);
+    }
+
+    /** True when a reason must be given for the status (postponed / cancelled). */
+    public static boolean statusNeedsReason(String status) {
+        return STATUS_POSTPONED.equals(status) || STATUS_CANCELLED.equals(status);
     }
 
     /** True if the location has map coordinates. */
@@ -111,6 +132,12 @@ public class Event implements Serializable {
 
     public Double getLongitude() { return longitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
+
+    public String getStatus() { return status == null ? STATUS_PUBLISHED : status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public String getStatusNote() { return statusNote; }
+    public void setStatusNote(String statusNote) { this.statusNote = statusNote; }
 
     public long getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(long updatedAt) { this.updatedAt = updatedAt; }

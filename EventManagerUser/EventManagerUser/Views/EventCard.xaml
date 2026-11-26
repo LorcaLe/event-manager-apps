@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    Event card used by Discover and Saved: large calendar block, countdown (or status
+    badge when postponed / cancelled / ended), name, time · place, type, sessions and a
+    star. Postponed / cancelled events get a tinted card and the reason, never a strike-through.
+-->
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:m="clr-namespace:EventManagerUser.Models"
+             x:Class="EventManagerUser.Views.EventCard"
+             x:DataType="m:EventItem">
+
+    <Border Style="{StaticResource Card}"
+            BackgroundColor="{Binding CardBg}"
+            Stroke="{Binding CardStrokeBrush}">
+        <Border.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnCardTapped" />
+        </Border.GestureRecognizers>
+
+        <Grid ColumnDefinitions="64,*,44" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="8">
+
+            <!-- Calendar block -->
+            <Border WidthRequest="64" HeightRequest="76" VerticalOptions="Start"
+                    StrokeShape="RoundRectangle 14" StrokeThickness="0"
+                    BackgroundColor="{Binding DateBlockBg}">
+                <VerticalStackLayout VerticalOptions="Center" Spacing="0">
+                    <Label Text="{Binding DayOfWeekShort}" FontSize="12" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center" TextColor="{Binding DateBlockFg}" />
+                    <Label Text="{Binding DayNumber}" FontSize="26" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center" TextColor="{Binding DateBlockFg}" />
+                    <Label Text="{Binding MonthShort}" FontSize="11" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center" TextColor="{Binding DateBlockFg}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout Grid.Column="1" Spacing="4">
+                <Label Text="{Binding CountdownText}" IsVisible="{Binding ShowCountdown}"
+                       FontSize="12" FontAttributes="Bold" TextColor="{Binding StatusFg}" />
+                <Border Style="{StaticResource StatusBadge}" IsVisible="{Binding ShowBadge}"
+                        BackgroundColor="{Binding StatusBg}">
+                    <Label Text="{Binding StatusText}" Style="{StaticResource StatusBadgeLabel}"
+                           TextColor="{Binding StatusFg}" />
+                </Border>
+                <Label Text="{Binding Name}" FontSize="16" FontAttributes="Bold"
+                       MaxLines="2" LineBreakMode="TailTruncation"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                <Label Text="{Binding TimeLocationText}" Style="{StaticResource SecondaryText}"
+                       MaxLines="1" LineBreakMode="TailTruncation" />
+                <HorizontalStackLayout Spacing="8" Margin="0,2,0,0">
+                    <Border Style="{StaticResource MetaChip}" MaximumWidthRequest="150">
+                        <Label Text="{Binding Type}" FontSize="12" FontAttributes="Bold"
+                               MaxLines="1" LineBreakMode="TailTruncation"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    </Border>
+                    <Label Text="{Binding SessionCountText}" Style="{StaticResource SecondaryText}"
+                           FontSize="12" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <Button Grid.Column="2" Style="{StaticResource IconButton}" VerticalOptions="Start"
+                    Text="{Binding FavouriteIcon}" TextColor="{StaticResource StarGold}"
+                    Clicked="OnStarClicked"
+                    SemanticProperties.Description="Save or unsave this event" />
+
+            <!-- Reason (postponed / cancelled) -->
+            <Label Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding StatusNote}"
+                   IsVisible="{Binding HasStatusNote}" FontSize="13" LineHeight="1.2"
+                   TextColor="{Binding StatusFg}" />
+
+            <!-- Saved tab: warn that a saved event changed -->
+            <Border Grid.Row="2" Grid.ColumnSpan="3" IsVisible="{Binding ShowSavedWarning}"
+                    StrokeShape="RoundRectangle 10" StrokeThickness="0" Padding="10,6"
+                    BackgroundColor="{Binding StatusBg}">
+                <Label Text="{Binding SavedWarningText}" FontSize="12" FontAttributes="Bold"
+                       TextColor="{Binding StatusFg}" />
+            </Border>
+        </Grid>
+    </Border>
+</ContentView>

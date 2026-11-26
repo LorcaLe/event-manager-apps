@@ -163,6 +163,8 @@ public final class SyncManager {
         m.put("description", e.getDescription());
         m.put("contactEmail", e.getContactEmail());
         m.put("contactPhone", e.getContactPhone());
+        m.put("status", e.getStatus());
+        m.put("statusNote", Event.statusNeedsReason(e.getStatus()) ? e.getStatusNote() : null);
         m.put("updatedAt", e.getUpdatedAt());
         m.put("syncedAt", ServerValue.TIMESTAMP);      // filled in by the server
         m.put("sessionCount", sessions.size());

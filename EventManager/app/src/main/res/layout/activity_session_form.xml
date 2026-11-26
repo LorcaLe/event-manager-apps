@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Add / edit a session (feature b). The date can only be chosen within the
-    event's dates; times are picked from a clock; type is chosen from a list.
+    Add / edit a session (feature b), same calendar-app style as the event form:
+      - "Adding to" card shows the parent event;
+      - big inline session name, type as chips;
+      - the day is picked from the event's own days (chips), so it is always in range;
+      - start / end time pills, with the session length and the event's hours;
+      - room, speaker and description rows; a room clash is shown inline under Room.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,19 +13,22 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/screen_background"
     android:orientation="vertical"
     tools:context=".SessionFormActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@color/screen_background">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:background="@color/screen_background"
             app:navigationContentDescription="@string/action_back"
-            app:navigationIcon="?attr/homeAsUpIndicator"
+            app:navigationIcon="@drawable/ic_close"
             tools:title="@string/title_add_session" />
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -34,26 +41,90 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="@dimen/screen_padding">
+            android:paddingHorizontal="@dimen/screen_padding"
+            android:paddingBottom="@dimen/space_m">
 
-            <TextView
-                android:id="@+id/tvEventName"
+            <!-- ===== Parent event ===== -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.EventManager.FormCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/space_m"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                tools:text="Greenwich Tech Summit" />
+                app:cardCornerRadius="14dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/space_s"
-                android:text="@string/section_session_details"
-                android:textAppearance="@style/TextAppearance.EventManager.Section" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="10dp">
 
+                    <LinearLayout
+                        android:layout_width="40dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_rounded_12"
+                        android:backgroundTint="@color/status_upcoming_bg"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvCtxMonth"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/status_upcoming_fg"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            tools:text="NOV" />
+
+                        <TextView
+                            android:id="@+id/tvCtxDay"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/status_upcoming_fg"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            tools:text="28" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/session_adding_to"
+                            android:textAppearance="?attr/textAppearanceBodySmall"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/tvCtxName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"
+                            android:textStyle="bold"
+                            tools:text="Greenwich Tech Summit" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvCtxDates"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_s"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="@color/text_secondary"
+                        tools:text="28/11 – 30/11" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ===== Name (big, inline) ===== -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilSessionName"
+                style="@style/Widget.EventManager.TitleField"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/hint_session_name">
@@ -62,93 +133,38 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:imeOptions="actionNext"
-                    android:inputType="textCapSentences"
-                    android:maxLength="100" />
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:maxLength="100"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Date: chosen from a calendar limited to the event's dates -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilSessionDate"
+            <!-- ===== Type as chips ===== -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_session_date"
-                app:endIconContentDescription="@string/cd_pick_date"
-                app:endIconDrawable="@drawable/ic_calendar"
-                app:endIconMode="custom">
+                android:layout_marginTop="@dimen/space_s"
+                app:chipSpacingVertical="0dp"
+                app:singleSelection="true" />
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:clickable="true"
-                    android:cursorVisible="false"
-                    android:focusable="false"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvTypeError"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilStartTime"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="@dimen/space_s"
-                    android:layout_weight="1"
-                    android:hint="@string/hint_time"
-                    app:endIconContentDescription="@string/cd_pick_time"
-                    app:endIconDrawable="@drawable/ic_schedule"
-                    app:endIconMode="custom">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clickable="true"
-                        android:cursorVisible="false"
-                        android:focusable="false"
-                        android:inputType="none" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilEndTime"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="@string/hint_end_time"
-                    app:endIconContentDescription="@string/cd_pick_time"
-                    app:endIconDrawable="@drawable/ic_schedule"
-                    app:endIconMode="custom">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clickable="true"
-                        android:cursorVisible="false"
-                        android:focusable="false"
-                        android:inputType="none" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilSessionType"
-                style="@style/Widget.EventManager.Dropdown"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_session_type">
-
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/actvSessionType"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginStart="@dimen/space_xs"
+                android:text="@string/error_session_type_required"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorError"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
             <!-- Shown only when "Others" is selected -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilOtherType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_s"
                 android:hint="@string/hint_other_type"
                 android:visibility="gone"
                 tools:visibility="visible">
@@ -161,67 +177,273 @@
                     android:maxLength="40" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- ===== Optional ===== -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_s"
-                android:layout_marginBottom="@dimen/space_s"
-                android:text="@string/section_session_optional"
-                android:textAppearance="@style/TextAppearance.EventManager.Section" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilSpeaker"
+            <!-- ===== When ===== -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.EventManager.FormCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_speaker">
+                android:layout_marginTop="@dimen/space_m">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:imeOptions="actionNext"
-                    android:inputType="textPersonName|textCapWords"
-                    android:maxLength="100" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/space_m"
+                    android:paddingVertical="12dp">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilRoom"
+                    <!-- Day of the event -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            style="@style/Widget.EventManager.RowIcon"
+                            android:src="@drawable/ic_calendar" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:text="@string/label_day"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_xs"
+                        android:scrollbars="none">
+
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/chipGroupDays"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:selectionRequired="true"
+                            app:singleLine="true"
+                            app:singleSelection="true" />
+                    </HorizontalScrollView>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="@dimen/space_s"
+                        android:background="@color/card_stroke" />
+
+                    <!-- Start → end -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:baselineAligned="false"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            style="@style/Widget.EventManager.RowIcon"
+                            android:layout_marginEnd="12dp"
+                            android:src="@drawable/ic_time" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilStartTime"
+                            style="@style/Widget.EventManager.PillField"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            app:placeholderText="@string/placeholder_time">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:clickable="true"
+                                android:contentDescription="@string/hint_time"
+                                android:cursorVisible="false"
+                                android:focusable="false"
+                                android:gravity="center"
+                                android:inputType="none"
+                                android:paddingStart="8dp"
+                                android:paddingTop="12dp"
+                                android:paddingEnd="8dp"
+                                android:paddingBottom="12dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_marginHorizontal="10dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_arrow_forward"
+                            app:tint="@color/text_secondary" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilEndTime"
+                            style="@style/Widget.EventManager.PillField"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            app:placeholderText="@string/placeholder_time">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:clickable="true"
+                                android:contentDescription="@string/hint_end_time"
+                                android:cursorVisible="false"
+                                android:focusable="false"
+                                android:gravity="center"
+                                android:inputType="none"
+                                android:paddingStart="8dp"
+                                android:paddingTop="12dp"
+                                android:paddingEnd="8dp"
+                                android:paddingBottom="12dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <!-- "1 h · Event: 09:00 – 17:30" -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginTop="@dimen/space_s"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvSessionDuration"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="@dimen/space_s"
+                            android:background="@drawable/bg_status_badge"
+                            android:backgroundTint="@color/status_upcoming_bg"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:textColor="@color/status_upcoming_fg"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:visibility="gone"
+                            tools:text="1 h"
+                            tools:visibility="visible" />
+
+                        <TextView
+                            android:id="@+id/tvEventHours"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textAppearance="?attr/textAppearanceBodySmall"
+                            android:textColor="@color/text_secondary"
+                            tools:text="Event: 09:00 – 17:30" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ===== Room, speaker, description ===== -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.EventManager.FormCard"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_room">
+                android:layout_height="wrap_content">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:imeOptions="actionNext"
-                    android:inputType="textCapSentences"
-                    android:maxLength="50" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:orientation="vertical"
+                    android:paddingHorizontal="4dp"
+                    android:paddingVertical="4dp">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilDescription"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_description"
-                app:counterEnabled="true"
-                app:counterMaxLength="500">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilRoom"
+                        style="@style/Widget.EventManager.RowField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_room_optional"
+                        app:startIconDrawable="@drawable/ic_room">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="top"
-                    android:inputType="textMultiLine|textCapSentences"
-                    android:maxLength="500"
-                    android:minLines="3" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionNext"
+                            android:inputType="textCapSentences"
+                            android:maxLength="50" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSaveSession"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_s"
-                android:text="@string/action_save" />
+                    <!-- Room clash, shown as soon as it happens (saving is still allowed) -->
+                    <TextView
+                        android:id="@+id/tvRoomClash"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="48dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/bg_rounded_8"
+                        android:backgroundTint="@color/status_postponed_bg"
+                        android:drawablePadding="8dp"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="8dp"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="@color/status_postponed_fg"
+                        android:visibility="gone"
+                        app:drawableStartCompat="@drawable/ic_warning"
+                        app:drawableTint="@color/status_postponed_fg"
+                        tools:text="Main hall is booked 09:30 – 10:30 by “Welcome coffee”. You can still save."
+                        tools:visibility="visible" />
 
+                    <View style="@style/Widget.EventManager.RowDivider" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilSpeaker"
+                        style="@style/Widget.EventManager.RowField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_speaker_optional"
+                        app:startIconDrawable="@drawable/ic_person">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionNext"
+                            android:inputType="textPersonName|textCapWords"
+                            android:maxLength="100" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <View style="@style/Widget.EventManager.RowDivider" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilDescription"
+                        style="@style/Widget.EventManager.RowField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_description_optional"
+                        app:counterEnabled="true"
+                        app:counterMaxLength="500"
+                        app:startIconDrawable="@drawable/ic_notes">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="top"
+                            android:inputType="textMultiLine|textCapSentences"
+                            android:maxLength="500"
+                            android:minLines="2" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <!-- ===== Pinned action ===== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        android:elevation="8dp"
+        android:paddingHorizontal="@dimen/screen_padding"
+        android:paddingVertical="12dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveSession"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="@string/action_save_session"
+            app:cornerRadius="16dp" />
+    </LinearLayout>
 </LinearLayout>

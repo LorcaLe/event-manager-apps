@@ -36,7 +36,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "event_manager.db";
     // v2: start_time/end_time + latitude/longitude on events
-    private static final int DB_VERSION = 2;
+    // v3: status + status_note on events
+    private static final int DB_VERSION = 3;
 
     // ----- Table: events -----
     public static final String T_EVENTS = "events";
@@ -55,6 +56,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String E_DESCRIPTION = "description";
     public static final String E_EMAIL = "contact_email";
     public static final String E_PHONE = "contact_phone";
+    public static final String E_STATUS = "status";
+    public static final String E_STATUS_NOTE = "status_note";
     public static final String E_UPDATED_AT = "updated_at";
     public static final String E_DIRTY = "is_dirty";
     public static final String E_DELETED = "is_deleted";
@@ -120,6 +123,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + E_DESCRIPTION + " TEXT, "
                 + E_EMAIL + " TEXT, "
                 + E_PHONE + " TEXT, "
+                + E_STATUS + " TEXT NOT NULL DEFAULT '" + Event.STATUS_PUBLISHED + "', "
+                + E_STATUS_NOTE + " TEXT, "
                 + E_UPDATED_AT + " INTEGER NOT NULL, "
                 + E_DIRTY + " INTEGER NOT NULL DEFAULT 1, "
                 + E_DELETED + " INTEGER NOT NULL DEFAULT 0, "
@@ -147,7 +152,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Coursework app: simply rebuild the schema on upgrade.
+        if (oldVersion == 2) {
+            // v2 -> v3: add the status columns and keep all existing data.
+            // Existing events become PUBLISHED and are re-uploaded with their status.
+            db.execSQL("ALTER TABLE " + T_EVENTS + " ADD COLUMN " + E_STATUS
+                    + " TEXT NOT NULL DEFAULT '" + Event.STATUS_PUBLISHED + "'");
+            db.execSQL("ALTER TABLE " + T_EVENTS + " ADD COLUMN " + E_STATUS_NOTE + " TEXT");
+            db.execSQL("UPDATE " + T_EVENTS + " SET " + E_DIRTY + " = 1");
+            return;
+        }
+        // Older schemas: simply rebuild.
         db.execSQL("DROP TABLE IF EXISTS " + T_SESSIONS);
         db.execSQL("DROP TABLE IF EXISTS " + T_EVENTS);
         onCreate(db);
@@ -174,6 +188,22 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     /**
+     * Changes only the manual status (and its reason) of an event and marks it for sync.
+     * The note is cleared for statuses that do not need a reason.
+     */
+    public int updateEventStatus(long eventId, String status, String note) {
+        ContentValues values = new ContentValues();
+        values.put(E_STATUS, status);
+        values.put(E_STATUS_NOTE, Event.statusNeedsReason(status) ? note : null);
+        values.put(E_DIRTY, 1);
+        values.put(E_UPDATED_AT, System.currentTimeMillis());
+        int rows = getWritableDatabase().update(T_EVENTS, values,
+                E_ID + " = ?", new String[]{String.valueOf(eventId)});
+        onLocalDataChanged();
+        return rows;
+    }
+
+    /**
      * Deletes an event and all its sessions.
      * Sessions are removed straight away; the event is soft-deleted so the
      * sync service knows to remove it from the cloud as well.
@@ -195,6 +225,33 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             db.endTransaction();
         }
         onLocalDataChanged();
+    }
+
+    /**
+     * Deletes several events (and their sessions) in one transaction, e.g. from the
+     * multi-select mode of the event list. Same soft delete as deleteEvent().
+     */
+    public void deleteEvents(java.util.Collection<Long> eventIds) {
+        if (eventIds.isEmpty()) return;
+        SQLiteDatabase db = getWritableDatabase();
+        long now = System.currentTimeMillis();
+        db.beginTransaction();
+        try {
+            for (long eventId : eventIds) {
+                String[] args = {String.valueOf(eventId)};
+                db.delete(T_SESSIONS, S_EVENT_ID + " = ?", args);
+
+                ContentValues values = new ContentValues();
+                values.put(E_DELETED, 1);
+                values.put(E_DIRTY, 1);
+                values.put(E_UPDATED_AT, now);
+                db.update(T_EVENTS, values, E_ID + " = ?", args);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+        onLocalDataChanged();   // one background sync removes them all from the cloud
     }
 
     /** Returns one event (with its session count), or null if not found. */
@@ -501,6 +558,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         v.put(E_DESCRIPTION, e.getDescription());
         v.put(E_EMAIL, e.getContactEmail());
         v.put(E_PHONE, e.getContactPhone());
+        v.put(E_STATUS, e.getStatus());
+        v.put(E_STATUS_NOTE, Event.statusNeedsReason(e.getStatus()) ? e.getStatusNote() : null);
         v.put(E_UPDATED_AT, System.currentTimeMillis());
         v.put(E_DIRTY, 1);   // every local change needs uploading
         v.put(E_DELETED, 0);
@@ -524,6 +583,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         e.setDescription(c.getString(c.getColumnIndexOrThrow(E_DESCRIPTION)));
         e.setContactEmail(c.getString(c.getColumnIndexOrThrow(E_EMAIL)));
         e.setContactPhone(c.getString(c.getColumnIndexOrThrow(E_PHONE)));
+        e.setStatus(c.getString(c.getColumnIndexOrThrow(E_STATUS)));
+        e.setStatusNote(c.getString(c.getColumnIndexOrThrow(E_STATUS_NOTE)));
         e.setUpdatedAt(c.getLong(c.getColumnIndexOrThrow(E_UPDATED_AT)));
         e.setDirty(c.getInt(c.getColumnIndexOrThrow(E_DIRTY)) == 1);
         e.setDeleted(c.getInt(c.getColumnIndexOrThrow(E_DELETED)) == 1);

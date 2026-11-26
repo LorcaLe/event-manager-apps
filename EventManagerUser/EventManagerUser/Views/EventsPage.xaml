@@ -1,110 +1,196 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- "Events" tab: search by name, filter by date, pull down to refresh. -->
+<!--
+    "Discover" tab: rounded search, status tabs, a "Happening now" section and the
+    "Coming up" list. Swipe a card left to Save it or mark it Not interested (Undo banner).
+-->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:EventManagerUser.ViewModels"
              xmlns:m="clr-namespace:EventManagerUser.Models"
+             xmlns:views="clr-namespace:EventManagerUser.Views"
              x:Class="EventManagerUser.Views.EventsPage"
              x:DataType="vm:EventsViewModel"
-             Title="Events">
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageLight}, Dark={StaticResource PageDark}}"
+             Title="Discover">
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*" Padding="16,8,16,0" RowSpacing="4">
+    <Grid RowDefinitions="Auto,*">
 
-        <SearchBar Grid.Row="0"
-                   Placeholder="Search events by name"
-                   Text="{Binding SearchText}" />
+        <!-- ===== Header (pinned) ===== -->
+        <VerticalStackLayout Grid.Row="0" Padding="20,20,20,6" Spacing="12">
+            <VerticalStackLayout Spacing="0">
+                <Label Text="What's on at Greenwich" Style="{StaticResource MutedText}" FontSize="14" />
+                <Label Text="Discover" FontSize="30" FontAttributes="Bold" CharacterSpacing="-0.5"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+            </VerticalStackLayout>
 
-        <!-- Date filter: tick to show only events taking place on that day -->
-        <HorizontalStackLayout Grid.Row="1" Spacing="4">
-            <CheckBox IsChecked="{Binding UseDateFilter}" VerticalOptions="Center" />
-            <Label Text="On date" VerticalOptions="Center" />
-            <DatePicker Date="{Binding FilterDate}"
-                        Format="dd/MM/yyyy"
-                        IsEnabled="{Binding UseDateFilter}"
-                        VerticalOptions="Center" />
-            <Button Text="Clear"
-                    Command="{Binding ClearFiltersCommand}"
-                    BackgroundColor="Transparent"
-                    TextColor="{StaticResource Primary}"
-                    Padding="8,0" />
-        </HorizontalStackLayout>
+            <!-- Rounded search field + date filter toggle -->
+            <Border StrokeShape="RoundRectangle 14" StrokeThickness="0" Padding="4,0"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource FieldLight}, Dark={StaticResource FieldDark}}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <SearchBar Placeholder="Search events, speakers, places"
+                               Text="{Binding SearchText}"
+                               BackgroundColor="Transparent"
+                               CancelButtonColor="{StaticResource Primary}" />
+                    <Button Grid.Column="1" Text="Date" Style="{StaticResource TextButton}"
+                            Command="{Binding ToggleDateFilterCommand}"
+                            SemanticProperties.Description="Filter by date" />
+                </Grid>
+            </Border>
 
-        <!-- Offline / error message -->
-        <Border Grid.Row="2"
-                IsVisible="{Binding HasStatus}"
-                Padding="12,8"
-                Margin="0,4"
-                StrokeShape="RoundRectangle 8"
-                Stroke="Transparent"
-                BackgroundColor="{AppThemeBinding Light=#FFF3E0, Dark=#4E342E}">
-            <Label Text="{Binding StatusMessage}" FontSize="13" />
-        </Border>
+            <!-- Date filter (shown after tapping "Date") -->
+            <HorizontalStackLayout IsVisible="{Binding ShowDateFilter}" Spacing="4">
+                <CheckBox IsChecked="{Binding UseDateFilter}" VerticalOptions="Center" />
+                <Label Text="On date" VerticalOptions="Center" Style="{StaticResource SecondaryText}" FontSize="14" />
+                <DatePicker Date="{Binding FilterDate}" Format="dd/MM/yyyy" VerticalOptions="Center" />
+                <Button Text="Clear" Style="{StaticResource TextButton}" Command="{Binding ClearFiltersCommand}" />
+            </HorizontalStackLayout>
 
-        <RefreshView Grid.Row="3"
-                     IsRefreshing="{Binding IsRefreshing}"
-                     Command="{Binding LoadCommand}">
+            <!-- Status tabs -->
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DiscoverTab">
+                            <Border x:Name="pill" Style="{StaticResource Pill}">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EventsViewModel}}, Path=SelectTabCommand, x:DataType=vm:EventsViewModel}"
+                                        CommandParameter="{Binding Key}" />
+                                </Border.GestureRecognizers>
+                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                    <Ellipse IsVisible="{Binding ShowLiveDot}" WidthRequest="7" HeightRequest="7"
+                                             Fill="{StaticResource StatusLiveAccent}" VerticalOptions="Center" />
+                                    <Label Text="{Binding Title}" FontSize="14" VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="TextColor" Value="White" />
+                                                <Setter Property="FontAttributes" Value="Bold" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </HorizontalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </ScrollView>
+
+            <!-- Offline / error message -->
+            <Border IsVisible="{Binding HasStatus}" Padding="12,8"
+                    StrokeShape="RoundRectangle 10" StrokeThickness="0"
+                    BackgroundColor="{AppThemeBinding Light=#FFF3E0, Dark=#4E342E}">
+                <Label Text="{Binding StatusMessage}" FontSize="13" />
+            </Border>
+        </VerticalStackLayout>
+
+        <!-- ===== Content ===== -->
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
             <CollectionView ItemsSource="{Binding Events}" SelectionMode="None">
 
+                <!-- Happening now + section title -->
+                <CollectionView.Header>
+                    <VerticalStackLayout Padding="20,8,20,0" Spacing="10">
+                        <Label Text="Happening now" Style="{StaticResource SectionTitle}" IsVisible="{Binding HasLive}" />
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding LiveEvents}" Spacing="12">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="m:EventItem">
+                                    <Border StrokeShape="RoundRectangle 22" StrokeThickness="0" Padding="18"
+                                            BackgroundColor="{AppThemeBinding Light=#14532D, Dark=#1B3D26}">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EventsViewModel}}, Path=OpenEventCommand, x:DataType=vm:EventsViewModel}"
+                                                CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Spacing="8">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                <Border Style="{StaticResource StatusBadge}" BackgroundColor="White" Padding="10,4">
+                                                    <HorizontalStackLayout Spacing="6">
+                                                        <Ellipse WidthRequest="7" HeightRequest="7" Fill="#16A34A" VerticalOptions="Center" />
+                                                        <Label Text="LIVE NOW" Style="{StaticResource StatusBadgeLabel}" TextColor="#14532D" />
+                                                    </HorizontalStackLayout>
+                                                </Border>
+                                                <Label Grid.Column="1" Text="{Binding Type}" FontSize="12" TextColor="#CDEBD6"
+                                                       VerticalOptions="Center" />
+                                                <Button Grid.Column="2" Style="{StaticResource IconButton}" WidthRequest="40" HeightRequest="40"
+                                                        BackgroundColor="#26FFFFFF" TextColor="{StaticResource SaveYellow}"
+                                                        Text="{Binding FavouriteIcon}" FontSize="20"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EventsViewModel}}, Path=ToggleFavouriteCommand, x:DataType=vm:EventsViewModel}"
+                                                        CommandParameter="{Binding .}"
+                                                        SemanticProperties.Description="Save or unsave this event" />
+                                            </Grid>
+                                            <Label Text="{Binding Name}" FontSize="22" FontAttributes="Bold" TextColor="White"
+                                                   MaxLines="2" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding LiveUntilText}" FontSize="14" TextColor="#CDEBD6"
+                                                   MaxLines="1" LineBreakMode="TailTruncation" />
+                                            <ProgressBar Progress="{Binding Progress}" ProgressColor="White" Margin="0,4,0,0" />
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <Label Text="{Binding CountdownText}" FontSize="12" TextColor="#CDEBD6" />
+                                                <Label Grid.Column="1" Text="{Binding CurrentSessionText}" IsVisible="{Binding HasCurrentSession}"
+                                                       FontSize="12" TextColor="#CDEBD6" HorizontalTextAlignment="End"
+                                                       MaxLines="1" LineBreakMode="TailTruncation" />
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                        <Label Text="{Binding ListTitle}" Style="{StaticResource SectionTitle}" IsVisible="{Binding HasList}"
+                               Margin="0,12,0,0" />
+                    </VerticalStackLayout>
+                </CollectionView.Header>
+
                 <CollectionView.EmptyView>
-                    <VerticalStackLayout Padding="32" Spacing="8" HorizontalOptions="Center">
+                    <VerticalStackLayout Padding="32" Spacing="8" HorizontalOptions="Center"
+                                         IsVisible="{Binding IsEmpty}">
                         <Label Text="No events found" FontSize="18" FontAttributes="Bold"
                                HorizontalTextAlignment="Center" />
-                        <Label Text="Try another name or date, or pull down to refresh."
-                               HorizontalTextAlignment="Center"
-                               TextColor="{StaticResource Gray500}" />
+                        <Label Text="Try another tab, name or date, or pull down to refresh."
+                               HorizontalTextAlignment="Center" Style="{StaticResource MutedText}" FontSize="14" />
                     </VerticalStackLayout>
                 </CollectionView.EmptyView>
 
+                <!-- Space so the Undo banner never covers the last card. (Not a BoxView:
+                     the implicit BoxView style paints a black background.) -->
+                <CollectionView.Footer>
+                    <ContentView HeightRequest="88" />
+                </CollectionView.Footer>
+
+                <!-- Swipe left: Save / Not interested -->
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="m:EventItem">
-                        <Border Margin="0,6"
-                                Padding="16,12"
-                                StrokeShape="RoundRectangle 16"
-                                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
-                                BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource Gray900}}">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EventsViewModel}}, Path=OpenEventCommand, x:DataType=vm:EventsViewModel}"
-                                    CommandParameter="{Binding .}" />
-                            </Border.GestureRecognizers>
-
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
-                                <Label Text="{Binding Name}" FontSize="17" FontAttributes="Bold"
-                                       MaxLines="2" LineBreakMode="TailTruncation" VerticalOptions="Center" />
-                                <Button Grid.Column="1"
-                                        Text="{Binding FavouriteIcon}"
-                                        FontSize="24"
-                                        WidthRequest="44" HeightRequest="44" Padding="0"
-                                        BackgroundColor="Transparent"
-                                        TextColor="#F9A825"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EventsViewModel}}, Path=ToggleFavouriteCommand, x:DataType=vm:EventsViewModel}"
-                                        CommandParameter="{Binding .}" />
-
-                                <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding DateTimeText}"
-                                       TextColor="{StaticResource Primary}" />
-                                <Label Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding LocationText}"
-                                       TextColor="{StaticResource Gray500}" MaxLines="1" LineBreakMode="TailTruncation" />
-                                <Label Grid.Row="3" Grid.ColumnSpan="2" Text="{Binding OrganiserText}"
-                                       TextColor="{StaticResource Gray500}" MaxLines="1" LineBreakMode="TailTruncation" />
-
-                                <!-- Type on the left, session count pinned to the right -->
-                                <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*" Margin="0,6,0,0">
-                                    <Border Padding="10,4" StrokeShape="RoundRectangle 8" Stroke="Transparent"
-                                            BackgroundColor="{AppThemeBinding Light=#DEE0FF, Dark=#283BA3}"
-                                            MaximumWidthRequest="170">
-                                        <Label Text="{Binding Type}" FontSize="12"
-                                               MaxLines="1" LineBreakMode="TailTruncation" />
-                                    </Border>
-                                    <Label Grid.Column="1" Text="{Binding SessionCountText}"
-                                           HorizontalOptions="End" VerticalOptions="Center"
-                                           TextColor="{AppThemeBinding Light=#00796B, Dark=#80CBC4}"
-                                           FontAttributes="Bold" />
-                                </Grid>
-                            </Grid>
-                        </Border>
+                        <SwipeView Margin="20,6" BackgroundColor="Transparent">
+                            <SwipeView.RightItems>
+                                <SwipeItems Mode="Reveal">
+                                    <SwipeItem Text="{Binding SaveText}" BackgroundColor="{StaticResource SaveYellow}"
+                                               Invoked="OnSwipeSave" />
+                                    <SwipeItem Text="Not interested" BackgroundColor="{StaticResource NotInterestedGrey}"
+                                               Invoked="OnSwipeNotInterested" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+                            <views:EventCard Tapped="OnCardTapped" StarTapped="OnCardStar" />
+                        </SwipeView>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
         </RefreshView>
+
+        <!-- Undo banner after hiding an event -->
+        <Border Grid.Row="1" IsVisible="{Binding ShowUndo}" VerticalOptions="End"
+                Margin="16,0,16,16" Padding="16,0,8,0" HeightRequest="52"
+                StrokeShape="RoundRectangle 14" StrokeThickness="0"
+                BackgroundColor="{StaticResource SnackbarBg}">
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="{Binding UndoText}" TextColor="White" FontSize="14" VerticalOptions="Center"
+                       MaxLines="1" LineBreakMode="TailTruncation" />
+                <Button Grid.Column="1" Text="Undo" Style="{StaticResource TextButton}"
+                        TextColor="{StaticResource SnackbarAction}" Command="{Binding UndoHideCommand}" />
+            </Grid>
+        </Border>
     </Grid>
 </ContentPage>

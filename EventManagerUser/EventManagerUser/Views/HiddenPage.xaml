@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- "Not interested" tab: events hidden from Discover and Saved; restore one or all. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:EventManagerUser.ViewModels"
+             xmlns:m="clr-namespace:EventManagerUser.Models"
+             x:Class="EventManagerUser.Views.HiddenPage"
+             x:DataType="vm:HiddenViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageLight}, Dark={StaticResource PageDark}}"
+             Title="Not interested">
+
+    <Grid RowDefinitions="Auto,*">
+        <VerticalStackLayout Padding="20,20,20,8" Spacing="6">
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="Not interested" FontSize="30" FontAttributes="Bold" CharacterSpacing="-0.5"
+                       VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                <Button Grid.Column="1" Text="Restore all" Style="{StaticResource TextButton}"
+                        IsVisible="{Binding HasHidden}" Command="{Binding RestoreAllCommand}" />
+            </Grid>
+            <Label Text="These events are hidden from Discover and Saved. Restore one to see it again."
+                   Style="{StaticResource SecondaryText}" FontSize="14" />
+        </VerticalStackLayout>
+
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
+            <CollectionView ItemsSource="{Binding Hidden}" SelectionMode="None">
+
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="32" Spacing="8" HorizontalOptions="Center">
+                        <Label Text="Nothing hidden" FontSize="18" FontAttributes="Bold"
+                               HorizontalTextAlignment="Center" />
+                        <Label Text="Swipe left on any event in Discover and tap Not interested to hide it here."
+                               HorizontalTextAlignment="Center" Style="{StaticResource MutedText}" FontSize="14" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="m:EventItem">
+                        <Border Style="{StaticResource Card}" Margin="20,6">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HiddenViewModel}}, Path=OpenEventCommand, x:DataType=vm:HiddenViewModel}"
+                                    CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="12">
+                                <Border WidthRequest="52" HeightRequest="56" StrokeShape="RoundRectangle 12" StrokeThickness="0"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource FieldLight}, Dark={StaticResource FieldDark}}">
+                                    <VerticalStackLayout VerticalOptions="Center">
+                                        <Label Text="{Binding MonthShort}" FontSize="11" FontAttributes="Bold"
+                                               HorizontalTextAlignment="Center" Style="{StaticResource MutedText}" />
+                                        <Label Text="{Binding DayNumber}" FontSize="20" FontAttributes="Bold"
+                                               HorizontalTextAlignment="Center" Style="{StaticResource MutedText}" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                    <Label Text="{Binding Name}" FontSize="15" FontAttributes="Bold"
+                                           MaxLines="2" LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                    <Label Text="{Binding HiddenMetaText}" Style="{StaticResource MutedText}"
+                                           MaxLines="1" LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="2" Text="Restore" Style="{StaticResource TextButton}"
+                                        VerticalOptions="Center"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HiddenViewModel}}, Path=RestoreCommand, x:DataType=vm:HiddenViewModel}"
+                                        CommandParameter="{Binding .}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.Footer>
+                    <Border Margin="20,12,20,24" Padding="14" StrokeShape="RoundRectangle 14" StrokeThickness="0"
+                            IsVisible="{Binding HasHidden}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource IndigoContainerLight}, Dark={StaticResource FieldDark}}">
+                        <Label FontSize="13"
+                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                               Text="Tip: swipe left on any event in Discover and tap Not interested. Saving an event removes it from this list." />
+                    </Border>
+                </CollectionView.Footer>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>
