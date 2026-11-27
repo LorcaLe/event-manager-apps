@@ -273,6 +273,8 @@
     <string name="status_desc_published">Upcoming → Live → Ended set by dates</string>
     <string name="status_desc_postponed">Visible, with a warning banner</string>
     <string name="status_desc_cancelled">Visible, marked as cancelled</string>
+    <string name="action_status_locked">Ended · status locked</string>
+    <string name="form_ended_note">This event has ended, so its status (%1$s) can no longer be changed.</string>
     <string name="hint_reason_required">Reason (required)</string>
     <string name="helper_reason_banner">Users who saved this event will see it as a banner.</string>
     <string name="action_save_sync">Save &amp; sync</string>

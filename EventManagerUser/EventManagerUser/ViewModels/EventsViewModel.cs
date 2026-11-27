@@ -28,7 +28,8 @@ public partial class DiscoverTab : ObservableObject
 /// "Discover" tab (feature g), optimised for browsing:
 ///  - search by name / place / organiser, optional date filter;
 ///  - tabs by status; a "Happening now" section and a "Coming up" list;
-///  - order: live → upcoming (soonest first, postponed/cancelled in date order) → ended;
+///  - "All" shows live events, then upcoming ones (soonest first, postponed/cancelled in
+///    date order); events that have already ended are only listed in the "Past" tab;
 ///  - DRAFT events and events marked "Not interested" are never shown;
 ///  - swipe left on a card to Save it or mark it Not interested (with Undo).
 /// </summary>
@@ -194,8 +195,9 @@ public partial class EventsViewModel : ObservableObject
                 ListTitle = "Postponed or cancelled";
                 break;
             default:
+                // "All" = what is still to come: live now + coming up. Past events only in the Past tab.
                 section = live;
-                main = comingUp.Concat(past).ToList();
+                main = comingUp;
                 ListTitle = "Coming up";
                 break;
         }

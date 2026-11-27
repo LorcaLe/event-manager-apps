@@ -1,6 +1,7 @@
 package com.greenwich.eventmanager;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.greenwich.eventmanager.model.Event;
@@ -115,6 +116,30 @@ public class EventStatusTest {
         assertEquals(EventStatus.ONGOING, EventStatus.displayStatus(e, at("2026-11-26", "12:00")));
         e.setStatus(null);   // missing status = published
         assertEquals(EventStatus.ONGOING, EventStatus.displayStatus(e, at("2026-11-26", "12:00")));
+    }
+
+    // ----- Status can only be changed before the event is over -----
+
+    @Test
+    public void canChangeStatus_beforeAndDuringEvent() {
+        Event e = event("2026-11-25", "2026-11-27", "08:30", "17:00");
+        assertTrue(EventStatus.canChangeStatus(e, at("2026-11-20", "12:00")));   // upcoming
+        assertTrue(EventStatus.canChangeStatus(e, at("2026-11-26", "12:00")));   // live
+    }
+
+    @Test
+    public void cannotChangeStatus_afterEventEnded() {
+        Event e = event("2026-11-25", "2026-11-27", "08:30", "17:00");
+        assertFalse(EventStatus.canChangeStatus(e, at("2026-11-27", "17:00")));
+        assertFalse(EventStatus.canChangeStatus(e, at("2026-12-01", "09:00")));
+    }
+
+    @Test
+    public void cannotChangeStatus_ignoresManualStatus() {
+        // Cancelled before it took place: once the dates have passed, it is still over
+        Event e = event("2026-11-20", "2026-11-20", "09:00", null);
+        e.setStatus(Event.STATUS_CANCELLED);
+        assertFalse(EventStatus.canChangeStatus(e, at("2026-11-26", "12:00")));
     }
 
     // ----- Sessions -----

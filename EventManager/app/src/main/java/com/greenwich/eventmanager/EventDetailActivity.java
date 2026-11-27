@@ -35,6 +35,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -227,6 +228,12 @@ public class EventDetailActivity extends AppCompatActivity {
 
         boolean hasReason = Event.statusNeedsReason(status) && !TextUtils.isEmpty(event.getStatusNote());
         tvDetailReason.setVisibility(hasReason ? View.VISIBLE : View.GONE);
+
+        // Once the event has ended its status is final
+        boolean canChange = EventStatus.canChangeStatus(event, now);
+        MaterialButton btnChangeStatus = findViewById(R.id.btnChangeStatus);
+        btnChangeStatus.setEnabled(canChange);
+        btnChangeStatus.setText(canChange ? R.string.action_change_status : R.string.action_status_locked);
         if (hasReason) {
             tvDetailReason.setText(getString(R.string.format_reason, event.getStatusNote()));
             UiUtils.tintStatus(tvDetailReason, status);
@@ -278,6 +285,11 @@ public class EventDetailActivity extends AppCompatActivity {
             String status = checkedStatus(group);
             String reason = UiUtils.text(tilReason);
             if (status == null) return;
+            if (!EventStatus.canChangeStatus(event, System.currentTimeMillis())) {
+                dialog.dismiss();   // the event ended while the sheet was open: status is final
+                showStatus();
+                return;
+            }
             if (Event.statusNeedsReason(status) && reason.isEmpty()) {
                 tilReason.setError(getString(R.string.error_status_reason_required));
                 return;

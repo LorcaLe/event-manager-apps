@@ -81,6 +81,15 @@ public final class EventStatus {
         return timeStatus(e, now);
     }
 
+    /**
+     * The status can only be changed before the event is over. Once its end time has
+     * passed (by the dates alone) the status is final: it can no longer be published,
+     * made a draft, postponed or cancelled.
+     */
+    public static boolean canChangeStatus(Event e, long now) {
+        return !ENDED.equals(timeStatus(e, now));
+    }
+
     /** True if the event is published and running right now. */
     public static boolean isLive(Event e, long now) {
         return ONGOING.equals(displayStatus(e, now));
