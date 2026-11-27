@@ -435,8 +435,10 @@ public class EventFormActivity extends AppCompatActivity {
      * the status (it is changed from the event page).
      */
     private void setupActionButtons() {
+        boolean ended = editingEvent != null
+                && !EventStatus.canChangeStatus(editingEvent, System.currentTimeMillis());
         boolean canChooseDraft = editingEvent == null
-                || Event.STATUS_DRAFT.equals(editingEvent.getStatus());
+                || (Event.STATUS_DRAFT.equals(editingEvent.getStatus()) && !ended);
         if (canChooseDraft) {
             btnSaveDraft.setOnClickListener(v -> onReviewClicked(Event.STATUS_DRAFT));
             btnReview.setText(R.string.action_review_publish);
@@ -447,7 +449,9 @@ public class EventFormActivity extends AppCompatActivity {
             btnSaveDraft.setVisibility(View.GONE);
             btnReview.setText(R.string.action_review_changes);
             btnReview.setOnClickListener(v -> onReviewClicked(keep));
-            tvFormNote.setText(getString(R.string.form_edit_note, EventFormat.statusLabel(this, keep)));
+            // Ended events: the status is final, so say so instead of pointing to Change status
+            tvFormNote.setText(getString(ended ? R.string.form_ended_note : R.string.form_edit_note,
+                    EventFormat.statusLabel(this, keep)));
         }
     }
 
@@ -742,19 +746,14 @@ public class EventFormActivity extends AppCompatActivity {
     // =====================================================================
 
     private void setupPickers() {
-        // Date pills are tapped to open the calendar (not typed)
-        setTapAction(tilStartDate, () -> showDatePicker(tilStartDate, null));
-        setTapAction(tilEndDate, () ->
+        // Dates can be typed (DD/MM/YYYY, checked on review) or picked from the calendar icon
+        tilStartDate.setEndIconOnClickListener(v -> showDatePicker(tilStartDate, null));
+        tilEndDate.setEndIconOnClickListener(v ->
                 // End date picker cannot go before the chosen start date
                 showDatePicker(tilEndDate, DateUtils.displayToIso(text(tilStartDate))));
 
         setupTimeField(tilTime);
         setupTimeField(tilEndTime);
-    }
-
-    private void setTapAction(TextInputLayout til, Runnable action) {
-        EditText field = til.getEditText();
-        if (field != null) field.setOnClickListener(v -> action.run());
     }
 
     private void setupTimeField(TextInputLayout til) {
